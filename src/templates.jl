@@ -129,16 +129,21 @@ function list_items_types(; limit::Int=20, offset::Int=0)
 end
 
 """
-    create_items_type(; title, body) -> Int
+    create_items_type(; title, body, metadata) -> Int
 
 Create a new items type. Returns the type ID.
+
+# Arguments
+- `title::String` — Type name (e.g., "Sample", "Instrument")
+- `body::String` — Default body template for new items of this type
+- `metadata::Union{Dict, Nothing}` — Extra fields schema (JSON metadata)
 
 # Example
 ```julia
 id = create_items_type(title="Sample", body="Template for lab samples")
 ```
 """
-function create_items_type(; title::String, body::String="")
+function create_items_type(; title::String, body::String="", metadata::Union{Dict, Nothing}=nothing)
     _check_enabled()
     url = "$(_elabftw_config.url)/api/v2/items_types"
     payload = Dict{String, Any}("title" => title)
@@ -146,6 +151,7 @@ function create_items_type(; title::String, body::String="")
         payload["body"] = body
         payload["content_type"] = 2
     end
+    !isnothing(metadata) && (payload["metadata"] = JSON.json(metadata))
     response = _elabftw_post(url, payload)
     return _parse_id_from_response(response)
 end
@@ -163,13 +169,14 @@ function get_items_type(id::Int)
 end
 
 """
-    update_items_type(id::Int; title, body)
+    update_items_type(id::Int; title, body, metadata)
 
 Update an items type.
 """
 function update_items_type(id::Int;
     title::Union{String, Nothing}=nothing,
-    body::Union{String, Nothing}=nothing
+    body::Union{String, Nothing}=nothing,
+    metadata::Union{Dict, Nothing}=nothing
 )
     _check_enabled()
     url = "$(_elabftw_config.url)/api/v2/items_types/$id"
@@ -179,6 +186,7 @@ function update_items_type(id::Int;
         payload["body"] = body
         payload["content_type"] = 2
     end
+    !isnothing(metadata) && (payload["metadata"] = JSON.json(metadata))
     isempty(payload) && return nothing
     _elabftw_patch(url, payload)
     return nothing
