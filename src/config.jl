@@ -1,6 +1,19 @@
 # eLabFTW configuration
 
-"""eLabFTW configuration state"""
+"""
+    ElabFTWConfig
+
+Global configuration state for the eLabFTW connection.
+
+# Fields
+- `url::Union{String, Nothing}` — eLabFTW instance URL (e.g., `"https://lab.elabftw.net"`)
+- `api_key::Union{String, Nothing}` — API key for authentication
+- `enabled::Bool` — whether the integration is active
+- `cache_dir::String` — local directory for caching downloaded files
+- `category_ids::Dict{Symbol, Int}` — map of spectrum types to eLabFTW category IDs (e.g., `:raman => 14`)
+
+Typically not constructed directly. Use [`configure_elabftw`](@ref) to set up the connection.
+"""
 mutable struct ElabFTWConfig
     url::Union{String, Nothing}
     api_key::Union{String, Nothing}
