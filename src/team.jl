@@ -90,7 +90,7 @@ end
 """
 function list_items_categories()
     _check_enabled()
-    url = "$(_elabftw_config.url)/api/v2/teams/current/items_types"
+    url = "$(_elabftw_config.url)/api/v2/teams/current/resources_categories"
     response = _elabftw_request(url)
     return JSON.parse(String(response.body))
 end
