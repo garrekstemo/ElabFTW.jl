@@ -2,7 +2,6 @@
 
 [![CI](https://github.com/garrekstemo/ElabFTW.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/garrekstemo/ElabFTW.jl/actions/workflows/CI.yml)
 [![codecov](https://codecov.io/gh/garrekstemo/ElabFTW.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/garrekstemo/ElabFTW.jl)
-[![Documentation](https://img.shields.io/badge/docs-dev-blue.svg)](https://garrekstemo.github.io/ElabFTW.jl/dev/)
 
 A Julia client for the [eLabFTW](https://www.elabftw.net/) API v2.
 
@@ -63,7 +62,3 @@ log_to_elab(
 ```
 
 `log_to_elab` creates a `.elab_id` file in the directory to track the experiment ID. Subsequent calls update the existing experiment instead of creating duplicates.
-
-## Documentation
-
-Full documentation is available at [garrekstemo.github.io/ElabFTW.jl](https://garrekstemo.github.io/ElabFTW.jl/dev/).
