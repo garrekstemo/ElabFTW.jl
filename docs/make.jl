@@ -8,8 +8,8 @@ makedocs(
     checkdocs = :exports,
     warnonly = [:missing_docs],
     format = Documenter.HTML(
-        prettyurls=false,
-        repolink="https://github.com/garrekstemo/ElabFTW.jl",
+        prettyurls = get(ENV, "CI", nothing) == "true",
+        repolink = "https://github.com/garrekstemo/ElabFTW.jl",
     ),
     pages = [
         "Home" => "index.md",
@@ -30,4 +30,10 @@ makedocs(
             "Printing" => "reference/printing.md",
         ],
     ],
+)
+
+deploydocs(
+    repo = "github.com/garrekstemo/ElabFTW.jl.git",
+    devbranch = "main",
+    push_preview = true,
 )
