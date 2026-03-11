@@ -3,6 +3,7 @@
 [![CI](https://github.com/garrekstemo/ElabFTW.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/garrekstemo/ElabFTW.jl/actions/workflows/CI.yml)
 [![codecov](https://codecov.io/gh/garrekstemo/ElabFTW.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/garrekstemo/ElabFTW.jl)
 [![Documentation](https://img.shields.io/badge/docs-dev-blue.svg)](https://garrekstemo.github.io/ElabFTW.jl/dev/)
+[![Aqua QA](https://raw.githubusercontent.com/JuliaTesting/Aqua.jl/master/badge.svg)](https://github.com/JuliaTesting/Aqua.jl)
 
 A Julia client for the [eLabFTW](https://www.elabftw.net/) API v2.
 
