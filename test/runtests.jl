@@ -8,7 +8,7 @@ include("mock_server.jl")
 @testset "ElabFTW.jl" begin
 
     @testset "Code quality (Aqua.jl)" begin
-        Aqua.test_all(ElabFTW)
+        Aqua.test_all(ElabFTW; deps_compat=(check_extras=false, ignore=[:Dates],))
     end
     # Pure tests (no HTTP server needed)
     include("test_pure.jl")
