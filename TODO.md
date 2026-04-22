@@ -14,13 +14,6 @@ client (`elabftw/elabapi-python`). Bugs #1-#3 in "Recently fixed" are done
 
 ## High-value features (next up)
 
-- [ ] **Storage units + containers** — `/api/v2/storage_units` (hierarchical
-      storage locations, supports `?hierarchy=true`) and
-      `/api/v2/{entity_type}/{id}/containers` (per-entity "stored in X, qty Y
-      units"). Directly complements the existing compounds module — right now
-      you can track *what* you have but not *where* it is. New file
-      `src/storage.jl`; new `test_storage.jl`; mock routes.
-
 - [ ] **Revisions** — `/api/v2/{entity_type}/{id}/revisions` — body history
       and rollback. GET list, GET single, PATCH `{action: "replace"}` to
       restore. Applies to experiments, items, experiments_templates.
