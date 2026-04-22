@@ -74,10 +74,6 @@ client (`elabftw/elabapi-python`).
 
 ## Docs & infra
 
-- [ ] LICENSE file — not present in repo
-- [ ] CHANGELOG.md — not present
-- [ ] CONTRIBUTING.md — not present
-- [ ] SECURITY.md — not present
 - [ ] How-to guide: batch operations (`batch.md` reference exists but no recipe)
 - [ ] How-to guide: compounds / chemical inventory
 - [ ] How-to guide: events / scheduler bookings
