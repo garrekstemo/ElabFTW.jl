@@ -188,7 +188,7 @@ function create_container(
     rows = list_containers(entity_type, entity_id)
     matches = filter(r -> Int(r["storage_id"]) == storage_id, rows)
     isempty(matches) &&
-        error("create_container: POST succeeded but no matching row found in listing")
+        throw(ParseError("create_container: POST succeeded but no matching row found in listing"))
     return maximum(r -> Int(r["id"]), matches)
 end
 

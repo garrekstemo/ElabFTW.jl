@@ -55,6 +55,7 @@ module ElabFTW
 using HTTP, JSON, Dates
 
 # Infrastructure (must be loaded first)
+include("errors.jl")
 include("config.jl")
 include("http.jl")
 include("cache.jl")
@@ -89,6 +90,15 @@ include("printing.jl")
 # Configuration
 export configure_elabftw, elabftw_enabled, disable_elabftw, enable_elabftw
 export test_connection
+
+# HTTP escape hatch
+export elabftw_http
+
+# Errors
+export ElabFTWError, HTTPError, NotConfiguredError
+export AuthError, PermissionError, NotFoundError
+export RateLimitError, ServerError, ClientError
+export NetworkError, ParseError
 
 # Cache
 export clear_elabftw_cache, elabftw_cache_info

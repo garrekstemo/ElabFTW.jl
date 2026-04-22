@@ -14,8 +14,8 @@ include("mock_server.jl")
     include("test_pure.jl")
     include("test_printing.jl")
 
-    # Start mock HTTP server
-    mock = start_mock_server()
+    # Start mock HTTP server (global so test files can queue failures on it)
+    global mock = start_mock_server()
     cache_dir = mktempdir()
     configure_elabftw(
         url = "http://127.0.0.1:$(mock.port)",
@@ -35,6 +35,7 @@ include("mock_server.jl")
         include("test_storage.jl")
         include("test_utility.jl")
         include("test_batch.jl")
+        include("test_errors.jl")
     finally
         stop_mock_server(mock.server)
         rm(cache_dir; recursive=true, force=true)

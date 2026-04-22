@@ -26,13 +26,6 @@ client (`elabftw/elabapi-python`). Bugs #1-#3 in "Recently fixed" are done
       Add `lock_experiment`, `sign_experiment`, `timestamp_experiment`,
       `pin_experiment`, and `*_item` variants.
 
-- [ ] **HTTP layer hardening** ([src/http.jl](src/http.jl))
-    - Typed exception hierarchy (e.g. `ElabFTWError`, `AuthError`, `NotFoundError`,
-      `RateLimitError`) so callers can pattern-match instead of string-matching
-    - Retry with exponential backoff on 5xx and 429; honor `Retry-After`
-    - Expose response headers (for `Location`, pagination metadata) without
-      forcing callers to drop to low-level HTTP
-
 ## Smaller feature gaps (worth picking up opportunistically)
 
 - [ ] **Uploads PATCH** — `PATCH /{entity}/{id}/uploads/{subid}` with action

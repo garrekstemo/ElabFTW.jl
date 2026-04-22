@@ -24,7 +24,7 @@
         @test dup_id != id
 
         delete_item(id)
-        @test_throws ErrorException get_item(id)
+        @test_throws NotFoundError get_item(id)
         delete_item(dup_id)
     end
 

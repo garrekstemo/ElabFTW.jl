@@ -26,7 +26,7 @@
         @test dup["id"] == dup_id
 
         delete_experiment(id)
-        @test_throws ErrorException get_experiment(id)
+        @test_throws NotFoundError get_experiment(id)
         delete_experiment(dup_id)
     end
 

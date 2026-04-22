@@ -20,7 +20,7 @@
         @test dup_id != id
 
         delete_experiment_template(dup_id)
-        @test_throws ErrorException get_experiment_template(dup_id)
+        @test_throws NotFoundError get_experiment_template(dup_id)
 
         delete_experiment_template(id)
     end
@@ -41,7 +41,7 @@
         @test it["title"] == "Updated type"
 
         delete_items_type(id)
-        @test_throws ErrorException get_items_type(id)
+        @test_throws NotFoundError get_items_type(id)
     end
 
     @testset "Items types (with metadata)" begin

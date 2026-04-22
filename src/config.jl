@@ -20,9 +20,11 @@ mutable struct ElabFTWConfig
     enabled::Bool
     cache_dir::String
     category_ids::Dict{Symbol, Int}  # :raman => 14, :ftir => 15, etc.
+    max_retries::Int
+    retry_base_delay::Float64
 end
 
-const _elabftw_config = ElabFTWConfig(nothing, nothing, false, "", Dict())
+const _elabftw_config = ElabFTWConfig(nothing, nothing, false, "", Dict(), 3, 0.5)
 
 """
     configure_elabftw(; url, api_key, cache_dir, category_ids)
@@ -48,12 +50,16 @@ function configure_elabftw(;
     url::String,
     api_key::String,
     cache_dir::String = joinpath(homedir(), ".cache", "elabftw"),
-    category_ids::Dict{Symbol, Int} = Dict{Symbol, Int}()
+    category_ids::Dict{Symbol, Int} = Dict{Symbol, Int}(),
+    max_retries::Int = 3,
+    retry_base_delay::Real = 0.5,
 )
     _elabftw_config.url = rstrip(url, '/')
     _elabftw_config.api_key = api_key
     _elabftw_config.cache_dir = cache_dir
     _elabftw_config.category_ids = category_ids
+    _elabftw_config.max_retries = max_retries
+    _elabftw_config.retry_base_delay = Float64(retry_base_delay)
     _elabftw_config.enabled = true
 
     # Create cache directory
@@ -85,9 +91,7 @@ end
 Re-enable eLabFTW queries after disabling.
 """
 function enable_elabftw()
-    if isnothing(_elabftw_config.url)
-        error("eLabFTW not configured. Call configure_elabftw() first.")
-    end
+    isnothing(_elabftw_config.url) && throw(NotConfiguredError())
     _elabftw_config.enabled = true
     @info "eLabFTW enabled"
 end

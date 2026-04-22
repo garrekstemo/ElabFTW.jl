@@ -24,11 +24,11 @@
         @test any(u -> u["id"] == freezer && u["children_count"] == 1, tree)
         @test any(u -> u["id"] == drawer && u["children_count"] == 0, tree)
 
-        @test_throws ErrorException delete_storage_unit(freezer)
+        @test_throws ClientError delete_storage_unit(freezer)
 
         delete_storage_unit(drawer)
         delete_storage_unit(freezer)
-        @test_throws ErrorException get_storage_unit(freezer)
+        @test_throws NotFoundError get_storage_unit(freezer)
     end
 
     @testset "Containers on items" begin
