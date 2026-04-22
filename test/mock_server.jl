@@ -123,6 +123,33 @@ function parse_json_body(req::HTTP.Request)
     end
 end
 
+function handle_compound_duplicate!(state::MockState, data::Dict)
+    # cid takes precedence when both are provided — matches real server.
+    cid = haskey(data, "cid") ? Int(data["cid"]) : nothing
+    cas = haskey(data, "cas") ? String(data["cas"]) : nothing
+    existing = nothing
+    for c in values(state.collections["compounds"])
+        if !isnothing(cid) && get(c, "pubchem_cid", nothing) == cid
+            existing = c; break
+        elseif !isnothing(cas) && get(c, "cas_number", nothing) == cas
+            existing = c; break
+        end
+    end
+    if !isnothing(existing)
+        return created_response("/api/v2/compounds/$(existing["id"])")
+    end
+    seed = Dict{String, Any}(
+        "name" => something(cas, "CID-$cid"),
+    )
+    isnothing(cas) || (seed["cas_number"] = cas)
+    isnothing(cid) || (seed["pubchem_cid"] = cid)
+    id = create_entity!(state, "compounds", seed)
+    # Copy the seed fields into the entity for assertions.
+    state.collections["compounds"][id]["pubchem_cid"] = cid
+    state.collections["compounds"][id]["cas_number"] = cas
+    return created_response("/api/v2/compounds/$id")
+end
+
 function apply_action!(entity::Dict, data::Dict)
     action = get(data, "action", "")
     if action == "lock"
@@ -304,6 +331,9 @@ function route(state::MockState, method::String, rest::Vector{String}, req::HTTP
             return json_response(result)
         elseif method == "POST"
             data = parse_json_body(req)
+            if collection == "compounds" && get(data, "action", "") == "duplicate"
+                return handle_compound_duplicate!(state, data)
+            end
             id = create_entity!(state, collection, data)
             return created_response("/api/v2/$collection/$id")
         end
@@ -341,7 +371,7 @@ function route(state::MockState, method::String, rest::Vector{String}, req::HTTP
             for (k, v) in data
                 entity[k] = v
             end
-            return ok_response()
+            return json_response(entity)
         elseif method == "DELETE"
             haskey(col, id) || return not_found()
             delete!(col, id)

@@ -62,6 +62,74 @@ function get_compound(id::Int)
 end
 
 """
+    update_compound(id::Int; kwargs...) -> Dict
+
+Update a compound's fields. All keyword arguments are forwarded verbatim
+to the server — there are ~30 accepted fields so an open interface is
+more practical than a full kwarg enumeration.
+
+Commonly updated fields:
+- `name::String`, `cas_number::String`, `smiles::String`, `inchi::String`
+- `inchi_key::String`, `iupac_name::String`, `molecular_formula::String`
+- `pubchem_cid::Int`
+- Hazard flags (`0` or `1`): `is_corrosive`, `is_flammable`, `is_toxic`,
+  `is_explosive`, `is_oxidising`, `is_radioactive`, `is_hazardous2env`,
+  `is_hazardous2health`, `is_serious_health_hazard`, ...
+
+Returns the updated compound record.
+
+!!! note
+    The OpenAPI spec does not document PATCH on `/compounds/{id}`, but the
+    server accepts it. This function may break if eLabFTW later removes the
+    endpoint.
+
+# Example
+```julia
+update_compound(42; name="Caffeine (verified)", is_toxic=1)
+```
+"""
+function update_compound(id::Int; kwargs...)
+    _check_enabled()
+    url = "$(_elabftw_config.url)/api/v2/compounds/$id"
+    payload = Dict{String, Any}(String(k) => v for (k, v) in kwargs)
+    isempty(payload) && return get_compound(id)
+    response = _elabftw_patch(url, payload)
+    return JSON.parse(String(response.body))
+end
+
+"""
+    import_compound(; cas=nothing, cid=nothing) -> Int
+
+Import a compound from PubChem by CAS registry number or PubChem CID.
+Returns the compound ID — either a new record, or an existing one if a
+compound with the same CAS or CID is already in the database (the server
+returns 201 in both cases).
+
+Exactly one of `cas` or `cid` must be provided. If both are given, the
+server silently prefers `cid`.
+
+# Example
+```julia
+caffeine = import_compound(cas="58-08-2")
+aspirin  = import_compound(cid=2244)
+```
+"""
+function import_compound(;
+    cas::Union{AbstractString, Nothing}=nothing,
+    cid::Union{Integer, Nothing}=nothing,
+)
+    _check_enabled()
+    isnothing(cas) == isnothing(cid) &&
+        throw(ArgumentError("import_compound: specify exactly one of `cas` or `cid`"))
+    url = "$(_elabftw_config.url)/api/v2/compounds"
+    payload = Dict{String, Any}("action" => "duplicate")
+    isnothing(cas) || (payload["cas"] = String(cas))
+    isnothing(cid) || (payload["cid"] = Int(cid))
+    response = _elabftw_post(url, payload)
+    return _parse_id_from_response(response)
+end
+
+"""
     delete_compound(id::Int)
 
 Delete a compound.

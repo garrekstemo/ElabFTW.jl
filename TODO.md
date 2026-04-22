@@ -21,9 +21,6 @@ client (`elabftw/elabapi-python`).
       archived attachments.
 - [ ] **Steps DELETE and `notif` action** — spec supports both; we only do
       list/add/finish.
-- [ ] **Compounds PATCH** — spec supports update; we only expose create/get/delete.
-- [ ] **Compound import via CAS/CID** — `POST /compounds` with `action=duplicate`
-      and a `cid` or `cas` field pulls from PubChem. High-value for lab users.
 - [ ] **Full CRUD on categories** — currently `list_experiments_categories` and
       `list_items_categories` are read-only. Spec has POST/PATCH/DELETE on
       `/teams/{id}/{experiments,resources}_categories/{subid}`.

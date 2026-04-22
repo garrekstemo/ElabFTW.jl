@@ -49,4 +49,44 @@
         delete_item(item_id)
         delete_compound(comp_id)
     end
+
+    @testset "update_compound" begin
+        id = create_compound(name="before", cas_number="000-00-0")
+
+        updated = update_compound(id; name="after", is_toxic=1)
+        @test updated["name"] == "after"
+        @test updated["is_toxic"] == 1
+        @test updated["cas_number"] == "000-00-0"  # unchanged
+
+        # Fetched separately matches
+        @test get_compound(id)["name"] == "after"
+
+        # No-op when called without kwargs — returns current compound
+        current = update_compound(id)
+        @test current["name"] == "after"
+
+        delete_compound(id)
+    end
+
+    @testset "import_compound via CAS" begin
+        id = import_compound(cas="58-08-2")
+        @test id isa Int
+        # Re-importing the same CAS should return the existing row.
+        id2 = import_compound(cas="58-08-2")
+        @test id2 == id
+        delete_compound(id)
+    end
+
+    @testset "import_compound via CID" begin
+        id = import_compound(cid=2244)
+        @test id isa Int
+        id2 = import_compound(cid=2244)
+        @test id2 == id
+        delete_compound(id)
+    end
+
+    @testset "import_compound argument validation" begin
+        @test_throws ArgumentError import_compound()
+        @test_throws ArgumentError import_compound(cas="x", cid=1)
+    end
 end
