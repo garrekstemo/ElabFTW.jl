@@ -159,6 +159,7 @@ export list_events, create_event, get_event, update_event, delete_event
 
 # Compounds
 export list_compounds, create_compound, get_compound, delete_compound
+export update_compound, import_compound
 export link_compound, list_compound_links
 
 # Storage units and containers
