@@ -12,8 +12,7 @@ client (`elabftw/elabapi-python`).
 
 ## Smaller feature gaps (worth picking up opportunistically)
 
-- [ ] **Steps `notif` action** — spec supports deadline notifications;
-      not yet explored.
+_None — all API endpoints covered._
 
 ## Admin surface (defer until needed)
 
@@ -35,19 +34,8 @@ client (`elabftw/elabapi-python`).
 
 ## Bugs & known issues
 
-- [ ] Consider whether `tag_experiments`/`tag_items` batch helpers should accept
-      arrays rather than one tag at a time (requires checking the batch
-      semantics against the live server).
-- [ ] Auth header format works but `test_connection()` doesn't verify the
-      header name/value style the API actually wants — add a regression test.
+_None open._
 
 ## Docs & infra
 
-- [ ] How-to guide: batch operations (`batch.md` reference exists but no recipe)
-- [ ] How-to guide: compounds / chemical inventory
-- [ ] How-to guide: events / scheduler bookings
-- [ ] How-to guide: `extra_fields` / metadata forms
-- [ ] Document rate limits and error handling patterns in `index.md`
-- [ ] Docstrings: add "error conditions" / "throws" to exported functions
-- [ ] Tests: malformed JSON, network timeout, concurrent request safety
-- [ ] Tests: explicit 4xx/5xx paths (currently only 401/403/404 covered implicitly)
+- [ ] Docstrings: add "Throws" sections to exported functions (audit + backfill)

@@ -130,6 +130,55 @@
                                 query=Dict("limit" => 5, "offset" => 0))
             @test resp.status == 200
         end
+
+        @testset "Authorization header regression" begin
+            # The server expects the raw API key as the Authorization header
+            # value (no "Bearer " prefix). Regression-guard the format.
+            saved_key = ElabFTW._elabftw_config.api_key
+            try
+                ElabFTW._elabftw_config.api_key = "regress-auth-key"
+                test_connection()  # any GET will do
+                @test mock.state.last_auth_header == "regress-auth-key"
+            finally
+                ElabFTW._elabftw_config.api_key = saved_key
+            end
+        end
+
+        @testset "ClientError surfaces 4xx other than 401/403/404/429" begin
+            id = create_experiment(title="client-4xx")
+            queue_failure!(mock.state, "/api/v2/experiments/$id", 422)
+            err = try
+                get_experiment(id); nothing
+            catch e; e end
+            @test err isa ClientError
+            @test err.status == 422
+            delete_experiment(id)
+        end
+
+        @testset "ParseError on malformed JSON" begin
+            # Directly exercise _parse_id_from_response on a body that's not
+            # valid JSON and has no Location header.
+            resp = HTTP.Response(201, "not json at all")
+            push!(resp.headers, "Content-Type" => "application/json")
+            @test_throws Exception ElabFTW._parse_id_from_response(resp)
+        end
+
+        @testset "Concurrent requests don't interfere" begin
+            # asyncmap runs N coroutines in parallel over the HTTP client.
+            # If the config / connection state weren't Task-safe we'd see
+            # interleaving failures. Shared mock state means each experiment
+            # must be independently round-tripped.
+            ids = asyncmap(1:10; ntasks=10) do i
+                eid = create_experiment(title="concurrent-$i")
+                exp = get_experiment(eid)
+                @assert exp["title"] == "concurrent-$i"
+                eid
+            end
+            @test length(unique(ids)) == 10
+            for eid in ids
+                delete_experiment(eid)
+            end
+        end
     finally
         ElabFTW._elabftw_config.max_retries = saved_retries
         ElabFTW._elabftw_config.retry_base_delay = saved_delay

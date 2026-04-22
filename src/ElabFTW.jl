@@ -115,6 +115,7 @@ export get_experiment, delete_experiment, duplicate_experiment
 export list_experiments, search_experiments
 export list_experiment_uploads, delete_experiment_upload
 export add_step, list_steps, finish_step, delete_step
+export update_step, notif_step
 export link_experiments, list_experiment_links, unlink_experiments
 export update_experiment_upload, replace_experiment_upload
 
@@ -125,6 +126,7 @@ export tag_item, untag_item, list_item_tags, clear_item_tags
 export upload_to_item, list_item_uploads, delete_item_upload
 export update_item_upload, replace_item_upload
 export add_item_step, list_item_steps, finish_item_step, delete_item_step
+export update_item_step, notif_item_step
 
 # Actions (PatchAction on experiments/items)
 export lock_experiment, pin_experiment, timestamp_experiment, sign_experiment

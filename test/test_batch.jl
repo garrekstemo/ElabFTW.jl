@@ -36,6 +36,16 @@
         tags = list_tags(id)
         @test any(t -> t["tag"] == "batch-added", tags)
 
+        # Vector form: add multiple tags to every match
+        ids2 = tag_experiments(["multi-a", "multi-b"]; query="batch-tag")
+        @test id in ids2
+        tags = list_tags(id)
+        @test any(t -> t["tag"] == "multi-a", tags)
+        @test any(t -> t["tag"] == "multi-b", tags)
+
+        # Empty vector is a no-op
+        @test isempty(tag_experiments(String[]; query="batch-tag"))
+
         delete_experiment(id)
     end
 
@@ -69,6 +79,13 @@
 
         tags = list_item_tags(id)
         @test any(t -> t["tag"] == "item-batch-tag", tags)
+
+        # Vector form
+        ids2 = tag_items(["multi-x", "multi-y"]; query="batch-tag-item")
+        @test id in ids2
+        tags = list_item_tags(id)
+        @test any(t -> t["tag"] == "multi-x", tags)
+        @test any(t -> t["tag"] == "multi-y", tags)
 
         delete_item(id)
     end

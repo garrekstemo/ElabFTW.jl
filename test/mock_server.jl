@@ -12,6 +12,9 @@ mutable struct MockState
     # resources_categories, experiments_status, items_status. Each maps id → entry.
     statuslike::Dict{String, Dict{Int, Dict{String, Any}}}
     extra_fields_keys::Vector{Dict{String, Any}}
+    # Captures the Authorization header from the most recent request, for the
+    # test_connection regression test. `nothing` until the first call.
+    last_auth_header::Union{String, Nothing}
     # Controlled failure injection for retry tests: each entry is a queue of
     # statuses to return on the next N requests to that path. Depleting the
     # queue drops through to normal routing. "Retry-After" is attached to 429s.
@@ -42,6 +45,7 @@ function MockState()
             "items_status" => Dict{Int, Dict{String, Any}}(),
         ),
         Dict{String, Any}[],
+        nothing,
         @NamedTuple{path::String, status::Int, retry_after::Union{Int, Nothing}}[]
     )
 end
@@ -222,6 +226,10 @@ function mock_handler(state::MockState)
         method = req.method
         path = String(split(req.target, "?")[1])
         segments = filter(!isempty, split(path, "/"))
+
+        # Record the Authorization header for the test_connection regression
+        # test. Captured before any routing so we see it even on 404s.
+        state.last_auth_header = HTTP.header(req, "Authorization", "")
 
         if length(segments) < 3 || segments[1] != "api" || segments[2] != "v2"
             return not_found()
@@ -709,13 +717,25 @@ function route_subresource(state::MockState, method::String, entity::Dict, colle
             isnothing(step_id) && return not_found()
             if method == "PATCH"
                 data = parse_json_body(req)
-                for step in steps
-                    if step["id"] == step_id
-                        get(data, "finished", false) && (step["finished"] = true)
-                        break
-                    end
+                step = nothing
+                for s in steps
+                    s["id"] == step_id && (step = s; break)
                 end
-                return ok_response()
+                isnothing(step) && return not_found()
+                action = get(data, "action", "")
+                if action == "notif"
+                    # Matches real server: requires a deadline to be set first.
+                    isnothing(get(step, "deadline", nothing)) &&
+                        return HTTP.Response(500, "deadline not set")
+                    step["deadline_notif"] = get(step, "deadline_notif", 0) == 1 ? 0 : 1
+                    return json_response(step)
+                end
+                # Plain-field update (no action key).
+                haskey(data, "body") && (step["body"] = data["body"])
+                haskey(data, "deadline") && (step["deadline"] = data["deadline"])
+                haskey(data, "is_immutable") && (step["is_immutable"] = data["is_immutable"])
+                get(data, "finished", false) && (step["finished"] = true)
+                return json_response(step)
             elseif method == "DELETE"
                 before = length(steps)
                 filter!(s -> s["id"] != step_id, steps)

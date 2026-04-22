@@ -139,6 +139,32 @@ function _delete_entity_step(entity_type::String, id::Int, step_id::Int)
     return nothing
 end
 
+function _update_entity_step(entity_type::String, id::Int, step_id::Int;
+    body::Union{String, Nothing}=nothing,
+    deadline::Union{String, Nothing}=nothing,
+    is_immutable::Union{Int, Nothing}=nothing,
+)
+    _check_enabled()
+    all(isnothing, (body, deadline, is_immutable)) &&
+        throw(ArgumentError("update_*_step: specify at least one of body, deadline, is_immutable"))
+    isnothing(is_immutable) || is_immutable in (0, 1) ||
+        throw(ArgumentError("update_*_step: is_immutable must be 0 or 1"))
+    url = "$(_elabftw_config.url)/api/v2/$entity_type/$id/steps/$step_id"
+    payload = Dict{String, Any}()
+    isnothing(body) || (payload["body"] = body)
+    isnothing(deadline) || (payload["deadline"] = deadline)
+    isnothing(is_immutable) || (payload["is_immutable"] = is_immutable)
+    _elabftw_patch(url, payload)
+    return nothing
+end
+
+function _notif_entity_step(entity_type::String, id::Int, step_id::Int)
+    _check_enabled()
+    url = "$(_elabftw_config.url)/api/v2/$entity_type/$id/steps/$step_id"
+    _elabftw_patch(url, Dict{String, Any}("action" => "notif"))
+    return nothing
+end
+
 # =============================================================================
 # Links
 # =============================================================================

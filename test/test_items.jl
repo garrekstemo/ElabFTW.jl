@@ -70,6 +70,11 @@
         delete_item_step(id, s2)
         @test length(list_item_steps(id)) == 1
 
+        # update_item_step + notif_item_step
+        update_item_step(id, s1; deadline="2026-05-01 09:00:00")
+        notif_item_step(id, s1)
+        @test first(filter(s -> s["id"] == s1, list_item_steps(id)))["deadline_notif"] == 1
+
         delete_item(id)
     end
 

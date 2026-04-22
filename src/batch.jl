@@ -108,6 +108,44 @@ function tag_experiments(tag::String;
 end
 
 """
+    tag_experiments(new_tags::Vector{String}; query, tags) -> Vector{Int}
+
+Add multiple tags to every experiment matching the search filter.
+
+!!! note
+    The positional `new_tags` is the tags to add; the `tags` kwarg (default
+    `String[]`) is the filter — entities must have all of these to qualify.
+
+# Example
+```julia
+# Add two tags to every experiment tagged "draft"
+tag_experiments(["reviewed", "2026-q2"]; tags=["draft"])
+```
+"""
+function tag_experiments(new_tags::Vector{String};
+    query::Union{String, Nothing} = nothing,
+    tags::Vector{String} = String[]
+)
+    _check_enabled()
+    if isnothing(query) && isempty(tags)
+        error("Must specify at least one of: query, tags")
+    end
+    isempty(new_tags) && return Int[]
+    all_matches = _find_all_entities("experiments"; query=query, tags=tags)
+    if isempty(all_matches)
+        println("No experiments match the criteria")
+        return Int[]
+    end
+    ids = [exp["id"] for exp in all_matches]
+    println("Adding $(length(new_tags)) tag(s) to $(length(ids)) experiment(s)...")
+    for exp in all_matches
+        tag_experiment(exp["id"], new_tags)
+    end
+    println("Done")
+    return ids
+end
+
+"""
     update_experiments(; query, tags, new_body, append_body) -> Vector{Int}
 
 Update multiple experiments matching a search query and/or tags.
@@ -244,6 +282,35 @@ function tag_items(tag::String;
         tag_item(item["id"], tag)
     end
 
+    println("Done")
+    return ids
+end
+
+"""
+    tag_items(new_tags::Vector{String}; query, tags) -> Vector{Int}
+
+Add multiple tags to every item matching the search filter. See
+[`tag_experiments`](@ref) for the positional-vs-kwarg distinction.
+"""
+function tag_items(new_tags::Vector{String};
+    query::Union{String, Nothing} = nothing,
+    tags::Vector{String} = String[]
+)
+    _check_enabled()
+    if isnothing(query) && isempty(tags)
+        error("Must specify at least one of: query, tags")
+    end
+    isempty(new_tags) && return Int[]
+    all_matches = _find_all_entities("items"; query=query, tags=tags)
+    if isempty(all_matches)
+        println("No items match the criteria")
+        return Int[]
+    end
+    ids = [item["id"] for item in all_matches]
+    println("Adding $(length(new_tags)) tag(s) to $(length(ids)) item(s)...")
+    for item in all_matches
+        tag_item(item["id"], new_tags)
+    end
     println("Done")
     return ids
 end

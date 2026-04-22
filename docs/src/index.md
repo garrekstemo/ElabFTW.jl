@@ -116,6 +116,37 @@ log_to_elab(
 
 Downloaded files are cached locally in `~/.cache/elabftw/`. The cache is checked before making API requests. Use [`clear_elabftw_cache`](@ref) to clear it and [`elabftw_cache_info`](@ref) to check usage.
 
+## Error handling and retries
+
+Every HTTP failure surfaces as a typed exception under `ElabFTWError`:
+
+```julia
+try
+    get_experiment(id)
+catch e
+    if e isa NotFoundError
+        # create fresh
+    elseif e isa HTTPError
+        @warn "API call failed" status=e isa ServerError ? e.status : "—" url=e.url
+    else
+        rethrow()
+    end
+end
+```
+
+Transient failures (HTTP `5xx` and `429`) are **retried automatically** with exponential backoff. The `Retry-After` header is honored when present. Tune behavior via [`configure_elabftw`](@ref):
+
+```julia
+configure_elabftw(
+    url       = ENV["ELABFTW_URL"],
+    api_key   = ENV["ELABFTW_API_KEY"],
+    max_retries      = 3,     # default
+    retry_base_delay = 0.5,   # seconds; each retry waits base * 2^(attempt-1)
+)
+```
+
+When retries are exhausted, the final `RateLimitError` or `ServerError` is thrown with status, URL, and (for 429) `retry_after`. See [Errors and HTTP](reference/errors.md) for the full hierarchy and the [`elabftw_http`](@ref) escape hatch for callers that need raw headers or pagination metadata.
+
 ## Troubleshooting
 
 ### `elabftw_enabled()` returns `false`
