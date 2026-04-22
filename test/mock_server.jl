@@ -123,6 +123,31 @@ function parse_json_body(req::HTTP.Request)
     end
 end
 
+function apply_action!(entity::Dict, data::Dict)
+    action = get(data, "action", "")
+    if action == "lock"
+        # Toggle locked state (matches real server behavior).
+        entity["locked"] = get(entity, "locked", 0) == 1 ? 0 : 1
+        return json_response(entity)
+    elseif action == "pin"
+        entity["is_pinned"] = get(entity, "is_pinned", 0) == 1 ? 0 : 1
+        return json_response(entity)
+    elseif action == "timestamp"
+        entity["timestamped"] = 1
+        entity["timestamped_at"] = "2026-01-01 00:00:00"
+        return json_response(entity)
+    elseif action == "sign"
+        # Real server returns 500 when signing keys are not configured.
+        # Mock the success path only when both passphrase and meaning are
+        # present; otherwise mirror the server's 500.
+        haskey(data, "passphrase") && haskey(data, "meaning") || return HTTP.Response(500, "signing keys not configured")
+        entity["signed"] = 1
+        entity["meaning"] = data["meaning"]
+        return json_response(entity)
+    end
+    return HTTP.Response(400, "unknown action: $action")
+end
+
 function create_entity!(state::MockState, collection::String, data::Dict)
     id = new_id!(state)
     entity = Dict{String, Any}(
@@ -140,6 +165,9 @@ function create_entity!(state::MockState, collection::String, data::Dict)
         "category" => get(data, "category", nothing),
         "category_title" => get(data, "category_title", ""),
         "metadata" => get(data, "metadata", nothing),
+        "locked" => 0,
+        "is_pinned" => 0,
+        "timestamped" => 0,
     )
     for key in ("start", "end", "name", "cas_number", "smiles", "molecular_formula",
                 "content_type", "item", "state", "userid")
@@ -291,6 +319,9 @@ function route(state::MockState, method::String, rest::Vector{String}, req::HTTP
             entity = get(col, id, nothing)
             isnothing(entity) && return not_found()
             data = parse_json_body(req)
+            if haskey(data, "action")
+                return apply_action!(entity, data)
+            end
             # Snapshot a revision whenever `body` is being replaced with a
             # different value — matches the real server's "on meaningful edit"
             # behavior without trying to emulate min_days/min_delta config.

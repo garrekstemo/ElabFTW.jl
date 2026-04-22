@@ -10,16 +10,6 @@ client (`elabftw/elabapi-python`).
 - [ ] Register package in Julia General registry
 - [ ] Proxy project docs through garrek.org Worker (optional)
 
-## High-value features (next up)
-
-- [ ] **`PatchAction` on experiments/items** — spec's full enum is
-      `lock`, `forcelock`, `forceunlock`, `exclusiveeditmode`, `pin`,
-      `sign` (requires `passphrase` + `meaning`), `timestamp` (RFC 3161),
-      `bloxberg`, `updatemetadatafield`, `update`. We did this for events
-      today; experiments/items currently have no action support.
-      Add `lock_experiment`, `sign_experiment`, `timestamp_experiment`,
-      `pin_experiment`, and `*_item` variants.
-
 ## Smaller feature gaps (worth picking up opportunistically)
 
 - [ ] **Uploads PATCH** — `PATCH /{entity}/{id}/uploads/{subid}` with action

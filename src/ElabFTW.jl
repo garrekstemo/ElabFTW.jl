@@ -67,6 +67,7 @@ include("subresource_helpers.jl")
 # Entity-specific public APIs
 include("experiments.jl")
 include("items.jl")
+include("actions.jl")
 
 # Cross-cutting features
 include("links.jl")
@@ -122,6 +123,11 @@ export list_items, search_items
 export tag_item, untag_item, list_item_tags, clear_item_tags
 export upload_to_item, list_item_uploads, delete_item_upload
 export add_item_step, list_item_steps, finish_item_step
+
+# Actions (PatchAction on experiments/items)
+export lock_experiment, pin_experiment, timestamp_experiment, sign_experiment
+export lock_item, pin_item, timestamp_item, sign_item
+export SIGN_MEANING
 
 # Cross-entity links
 export link_experiment_to_item, unlink_experiment_from_item, list_experiment_item_links
