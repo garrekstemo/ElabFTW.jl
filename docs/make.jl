@@ -33,6 +33,7 @@ makedocs(
             "Events" => "reference/events.md",
             "Compounds" => "reference/compounds.md",
             "Storage" => "reference/storage.md",
+            "Revisions" => "reference/revisions.md",
             "Utility" => "reference/utility.md",
             "Cache" => "reference/cache.md",
             "Provenance" => "reference/provenance.md",

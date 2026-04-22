@@ -81,6 +81,7 @@ include("batch.jl")
 include("events.jl")
 include("compounds.jl")
 include("storage.jl")
+include("revisions.jl")
 include("utility.jl")
 
 # High-level provenance and printing
@@ -159,6 +160,9 @@ export list_storage_units, get_storage_unit, create_storage_unit
 export rename_storage_unit, delete_storage_unit
 export list_containers, get_container, create_container
 export update_container, delete_container
+
+# Revisions
+export list_revisions, get_revision, restore_revision
 
 # Utility
 export instance_info

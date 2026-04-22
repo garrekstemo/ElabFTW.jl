@@ -291,6 +291,22 @@ function route(state::MockState, method::String, rest::Vector{String}, req::HTTP
             entity = get(col, id, nothing)
             isnothing(entity) && return not_found()
             data = parse_json_body(req)
+            # Snapshot a revision whenever `body` is being replaced with a
+            # different value — matches the real server's "on meaningful edit"
+            # behavior without trying to emulate min_days/min_delta config.
+            if haskey(data, "body") && get(entity, "body", "") != data["body"]
+                revs = get!(entity, "revisions", Dict{Int, Dict{String, Any}}())
+                rev_id = new_id!(state)
+                revs[rev_id] = Dict{String, Any}(
+                    "id" => rev_id,
+                    "body" => get(entity, "body", ""),
+                    "body_html" => get(entity, "body", ""),
+                    "content_type" => 1,
+                    "created_at" => "2026-01-01 00:00:00",
+                    "fullname" => "Test User",
+                    "userid" => 1,
+                )
+            end
             for (k, v) in data
                 entity[k] = v
             end
@@ -644,6 +660,36 @@ function route_subresource(state::MockState, method::String, entity::Dict, colle
             elseif method == "DELETE"
                 filter!(c -> c["id"] != comment_id, comments)
                 return ok_response()
+            end
+        end
+        return not_found()
+    end
+
+    # Revisions (body history)
+    if subresource == "revisions"
+        revs = get!(entity, "revisions", Dict{Int, Dict{String, Any}}())
+        if n == 0 && method == "GET"
+            summary = [Dict{String, Any}(
+                "id" => r["id"],
+                "content_type" => r["content_type"],
+                "created_at" => r["created_at"],
+                "fullname" => r["fullname"],
+            ) for r in values(revs)]
+            sort!(summary; by=r -> r["id"], rev=true)
+            return json_response(summary)
+        elseif n == 1
+            rev_id = tryparse(Int, rest[1])
+            isnothing(rev_id) && return not_found()
+            rev = get(revs, rev_id, nothing)
+            isnothing(rev) && return not_found()
+            if method == "GET"
+                return json_response(rev)
+            elseif method == "PATCH"
+                data = parse_json_body(req)
+                get(data, "action", "") == "replace" ||
+                    return HTTP.Response(400, "only action=replace is supported")
+                entity["body"] = rev["body"]
+                return json_response(rev)
             end
         end
         return not_found()
