@@ -82,9 +82,18 @@
             uploads = list_item_uploads(id)
             @test length(uploads) == 1
 
+            # PATCH comment + replace in one test — experiments.jl covers
+            # the full grid, this one just exercises the item-side wrapper
+            updated = update_item_upload(id, upload_id; comment="updated")
+            @test updated["comment"] == "updated"
+
+            new_id = replace_item_upload(id, upload_id, tmpfile)
+            @test new_id != upload_id
+            @test length(list_item_uploads(id; state=2)) == 1
+
+            delete_item_upload(id, new_id)
             delete_item_upload(id, upload_id)
-            uploads = list_item_uploads(id)
-            @test isempty(uploads)
+            @test isempty(list_item_uploads(id; state=[1, 2, 3]))
         finally
             isfile(tmpfile) && rm(tmpfile)
         end

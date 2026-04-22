@@ -31,6 +31,8 @@ clear_experiment_tags
 ```@docs
 upload_to_experiment
 list_experiment_uploads
+update_experiment_upload
+replace_experiment_upload
 delete_experiment_upload
 ```
 

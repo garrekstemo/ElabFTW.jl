@@ -12,13 +12,6 @@ client (`elabftw/elabapi-python`).
 
 ## Smaller feature gaps (worth picking up opportunistically)
 
-- [ ] **Uploads PATCH** — `PATCH /{entity}/{id}/uploads/{subid}` with action
-      `update` + fields `real_name`, `comment`, `state`. Rename and archive
-      attachments without re-uploading.
-- [ ] **Uploads replace** — `POST /{entity}/{id}/uploads/{subid}` archives the
-      prior file. Useful for "replace this figure" workflows.
-- [ ] **Uploads state filter** — `?state=1|2|3` on list. Currently can't see
-      archived attachments.
 - [ ] **Steps DELETE and `notif` action** — spec supports both; we only do
       list/add/finish.
 - [ ] **Full CRUD on categories** — currently `list_experiments_categories` and

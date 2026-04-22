@@ -53,9 +53,14 @@ function _upload_to_entity(entity_type::String, id::Int, filepath::String; comme
     return _parse_id_from_response(response)
 end
 
-function _list_entity_uploads(entity_type::String, id::Int)
+function _list_entity_uploads(entity_type::String, id::Int;
+    state::Union{Int, Vector{Int}, Nothing}=nothing,
+)
     _check_enabled()
     url = "$(_elabftw_config.url)/api/v2/$entity_type/$id/uploads"
+    if !isnothing(state)
+        url *= "?state=" * (state isa Int ? string(state) : join(state, ","))
+    end
     response = _elabftw_request(url)
     return JSON.parse(String(response.body))
 end
@@ -65,6 +70,34 @@ function _get_entity_upload(entity_type::String, id::Int, upload_id::Int)
     url = "$(_elabftw_config.url)/api/v2/$entity_type/$id/uploads/$upload_id"
     response = _elabftw_request(url)
     return JSON.parse(String(response.body))
+end
+
+function _update_entity_upload(entity_type::String, id::Int, upload_id::Int;
+    real_name::Union{String, Nothing}=nothing,
+    comment::Union{String, Nothing}=nothing,
+    state::Union{Int, Nothing}=nothing,
+)
+    _check_enabled()
+    all(isnothing, (real_name, comment, state)) &&
+        throw(ArgumentError("update_*_upload: specify at least one of real_name, comment, state"))
+    isnothing(state) || state in (1, 2, 3) ||
+        throw(ArgumentError("update_*_upload: state must be 1 (Normal), 2 (Archived), or 3 (Deleted)"))
+    url = "$(_elabftw_config.url)/api/v2/$entity_type/$id/uploads/$upload_id"
+    payload = Dict{String, Any}("action" => "update")
+    isnothing(real_name) || (payload["real_name"] = real_name)
+    isnothing(comment) || (payload["comment"] = comment)
+    isnothing(state) || (payload["state"] = state)
+    response = _elabftw_patch(url, payload)
+    return JSON.parse(String(response.body))
+end
+
+function _replace_entity_upload(entity_type::String, id::Int, upload_id::Int,
+    filepath::String; comment::String="",
+)
+    _check_enabled()
+    url = "$(_elabftw_config.url)/api/v2/$entity_type/$id/uploads/$upload_id"
+    response = _elabftw_upload(url, filepath; comment=comment)
+    return _parse_id_from_response(response)
 end
 
 function _delete_entity_upload(entity_type::String, id::Int, upload_id::Int)

@@ -246,11 +246,34 @@ function upload_to_item(id::Int, filepath::String; comment::String="")
 end
 
 """
-    list_item_uploads(id::Int) -> Vector{Dict}
+    list_item_uploads(id::Int; state=nothing) -> Vector{Dict}
 
-List all file uploads on an item.
+List file uploads on an item. See [`list_experiment_uploads`](@ref) for the
+`state` filter semantics.
 """
-list_item_uploads(id::Int) = _list_entity_uploads("items", id)
+list_item_uploads(id::Int; state::Union{Int, Vector{Int}, Nothing}=nothing) =
+    _list_entity_uploads("items", id; state=state)
+
+"""
+    update_item_upload(id::Int, upload_id::Int; real_name=nothing, comment=nothing, state=nothing) -> Dict
+
+Modify upload attributes on an item. See [`update_experiment_upload`](@ref)
+for argument semantics.
+"""
+update_item_upload(id::Int, upload_id::Int;
+    real_name::Union{String, Nothing}=nothing,
+    comment::Union{String, Nothing}=nothing,
+    state::Union{Int, Nothing}=nothing,
+) = _update_entity_upload("items", id, upload_id;
+        real_name=real_name, comment=comment, state=state)
+
+"""
+    replace_item_upload(id::Int, upload_id::Int, filepath::String; comment="") -> Int
+
+Replace an item upload. See [`replace_experiment_upload`](@ref).
+"""
+replace_item_upload(id::Int, upload_id::Int, filepath::String; comment::String="") =
+    _replace_entity_upload("items", id, upload_id, filepath; comment=comment)
 
 """
     delete_item_upload(id::Int, upload_id::Int)
