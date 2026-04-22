@@ -174,7 +174,7 @@ recent = search_items(tags=["project-alpha"], query="sample a", limit=10)
 
 ## See also
 
-- [Items](@ref) — full reference for item CRUD, tags, uploads, and steps
+- [Items](../reference/items.md) — full reference for item CRUD, tags, uploads, and steps
 - [Links](@ref) — experiment-to-item, item-to-experiment, and item-to-item linking
 - [Templates](@ref) — `list_items_types`, `create_items_type`, and experiment templates
 - [Iterative Experiment](@ref) — build up the experiment side of the record

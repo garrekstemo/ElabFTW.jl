@@ -2,8 +2,7 @@
 
 Checklist derived from a gap analysis against the official eLabFTW v2
 OpenAPI spec (`elabftw/apidoc/v2/openapi.yaml`) and the reference Python
-client (`elabftw/elabapi-python`). Bugs #1-#3 in "Recently fixed" are done
-— everything else is open.
+client (`elabftw/elabapi-python`).
 
 ## Existing backlog
 
@@ -89,17 +88,3 @@ client (`elabftw/elabapi-python`). Bugs #1-#3 in "Recently fixed" are done
 - [ ] Tests: malformed JSON, network timeout, concurrent request safety
 - [ ] Tests: explicit 4xx/5xx paths (currently only 401/403/404 covered implicitly)
 - [ ] Run Documenter build with `warnonly=[]` to surface missing docstrings
-
-## Recently fixed (for context)
-
-- 2026-04-22: `/favtags` endpoint (was `/users/me/favorite_tags`), POST body
-  shape (`{"tag": string}`), DELETE by `tags_id`
-- 2026-04-22: `/event/{id}` singular path for GET/PATCH/DELETE (was `/events/{id}`)
-- 2026-04-22: `POST /events/{item_id}` with item in URL path (was `POST /events`
-  with item in body)
-- 2026-04-22: `update_event` target-based PATCH contract (`title`, `datetime`,
-  `experiment`, `item_link` — one HTTP call per field)
-- 2026-04-22: Extended list/search params on `list_experiments`, `list_items`,
-  `search_experiments`, `search_items`: `state`, `status`, `scope`, `cat`
-  (Int or Vector{Int}), `owner` (Int or Vector{Int}), `extended`, `related`,
-  `related_origin`
