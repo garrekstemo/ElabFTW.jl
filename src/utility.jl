@@ -82,9 +82,7 @@ function import_file(filepath::String;
     category::Union{Int, Nothing}=nothing
 )
     _check_enabled()
-    if !isfile(filepath)
-        error("File not found: $filepath")
-    end
+    isfile(filepath) || throw(ArgumentError("File not found: $filepath"))
     etype = String(entity_type)
     url = "$(_elabftw_config.url)/api/v2/import"
     headers = [
