@@ -6,7 +6,6 @@ client (`elabftw/elabapi-python`).
 
 ## Existing backlog
 
-- [ ] Add docstrings to all exported functions (docs build uses `warnonly = [:missing_docs]`)
 - [ ] Review codecov report and fill test coverage gaps
 - [ ] Register package in Julia General registry
 - [ ] Proxy project docs through garrek.org Worker (optional)
@@ -87,4 +86,3 @@ client (`elabftw/elabapi-python`).
 - [ ] Docstrings: add "error conditions" / "throws" to exported functions
 - [ ] Tests: malformed JSON, network timeout, concurrent request safety
 - [ ] Tests: explicit 4xx/5xx paths (currently only 401/403/404 covered implicitly)
-- [ ] Run Documenter build with `warnonly=[]` to surface missing docstrings
