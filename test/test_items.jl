@@ -67,6 +67,9 @@
         finished = first(filter(s -> s["id"] == s1, steps))
         @test finished["finished"] == true
 
+        delete_item_step(id, s2)
+        @test length(list_item_steps(id)) == 1
+
         delete_item(id)
     end
 

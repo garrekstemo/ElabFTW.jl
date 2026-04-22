@@ -12,15 +12,8 @@ client (`elabftw/elabapi-python`).
 
 ## Smaller feature gaps (worth picking up opportunistically)
 
-- [ ] **Steps DELETE and `notif` action** — spec supports both; we only do
-      list/add/finish.
-- [ ] **Full CRUD on categories** — currently `list_experiments_categories` and
-      `list_items_categories` are read-only. Spec has POST/PATCH/DELETE on
-      `/teams/{id}/{experiments,resources}_categories/{subid}`.
-- [ ] **Status endpoints** — `/teams/{id}/experiments_status` and `items_status`
-      are not implemented at all. Full CRUD per spec.
-- [ ] **Extra fields keys** — `GET /extra_fields_keys?q=` returns autocomplete
-      suggestions for metadata keys. Useful for form builders.
+- [ ] **Steps `notif` action** — spec supports deadline notifications;
+      not yet explored.
 
 ## Admin surface (defer until needed)
 

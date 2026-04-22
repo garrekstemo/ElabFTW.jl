@@ -26,4 +26,24 @@
         @test length(favs) == initial_count
         @test !any(t -> t["tag"] == "alpha", favs)
     end
+
+    @testset "search_extra_fields_keys" begin
+        # Seed the mock state directly — the server auto-populates this from
+        # real entity metadata, which the mock doesn't track.
+        push!(mock.state.extra_fields_keys,
+            Dict{String, Any}("extra_fields_key" => "concentration", "frequency" => 7))
+        push!(mock.state.extra_fields_keys,
+            Dict{String, Any}("extra_fields_key" => "temperature", "frequency" => 3))
+
+        all_keys = search_extra_fields_keys()
+        @test length(all_keys) >= 2
+
+        filtered = search_extra_fields_keys(q="temp")
+        @test length(filtered) == 1
+        @test filtered[1]["extra_fields_key"] == "temperature"
+
+        @test isempty(search_extra_fields_keys(q="xyz-no-match"))
+
+        empty!(mock.state.extra_fields_keys)
+    end
 end
