@@ -161,7 +161,7 @@ exp["body"]
 
 ## See also
 
-- [Experiments](@ref) — full reference for `create_experiment`, `update_experiment`, `upload_to_experiment`, `add_step`, `finish_step`, and related calls
-- [Items and Linking](@ref) — connect this experiment to the samples, instruments, and other resources it depended on
+- [Experiments](../reference/experiments.md) — full reference for `create_experiment`, `update_experiment`, `upload_to_experiment`, `add_step`, `finish_step`, and related calls
+- [Items and Linking](items_and_linking.md) — connect this experiment to the samples, instruments, and other resources it depended on
 - [Printing](@ref) — `print_experiments` for a quick tabular view of search results
 - [Batch Operations](@ref) — `tag_experiments` and `update_experiments` for applying the same change across many entries

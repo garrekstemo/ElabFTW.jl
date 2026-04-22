@@ -91,7 +91,7 @@ Both operations are admin-only.
 
 ## See Also
 
-- [Experiments](@ref) — `tag_experiment`, `list_experiment_tags`
-- [Items](@ref) — `tag_item`, `list_item_tags`
+- [Experiments](../reference/experiments.md) — `tag_experiment`, `list_experiment_tags`
+- [Items](../reference/items.md) — `tag_item`, `list_item_tags`
 - [Team](@ref) — `list_team_tags`, `rename_team_tag`, `delete_team_tag`
 - [Batch Operations](@ref) — `tag_experiments`, `tag_items`
