@@ -39,4 +39,5 @@ delete_item_upload
 add_item_step
 list_item_steps
 finish_item_step
+delete_item_step
 ```

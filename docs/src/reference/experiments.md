@@ -42,6 +42,7 @@ delete_experiment_upload
 add_step
 list_steps
 finish_step
+delete_step
 ```
 
 ## Experiment Links

@@ -132,6 +132,13 @@ function _finish_entity_step(entity_type::String, id::Int, step_id::Int)
     return nothing
 end
 
+function _delete_entity_step(entity_type::String, id::Int, step_id::Int)
+    _check_enabled()
+    url = "$(_elabftw_config.url)/api/v2/$entity_type/$id/steps/$step_id"
+    _elabftw_delete(url)
+    return nothing
+end
+
 # =============================================================================
 # Links
 # =============================================================================

@@ -433,6 +433,13 @@ finish_step(42, 1)
 finish_step(id::Int, step_id::Int) = _finish_entity_step("experiments", id, step_id)
 
 """
+    delete_step(id::Int, step_id::Int)
+
+Delete an analysis step from an experiment.
+"""
+delete_step(id::Int, step_id::Int) = _delete_entity_step("experiments", id, step_id)
+
+"""
     link_experiments(id1, id2)
 
 Create a link between two experiments. The link appears on experiment `id1`

@@ -33,4 +33,42 @@
         @test length(item_cats) >= 1
         @test haskey(item_cats[1], "title")
     end
+
+    @testset "Category CRUD" begin
+        for et in (:experiments, :items)
+            id = create_category(et; title="jl-cat", color="aaaaaa", default=0)
+            @test id isa Int
+
+            cat = get_category(et, id)
+            @test cat["title"] == "jl-cat"
+            @test cat["color"] == "aaaaaa"
+
+            updated = update_category(et, id; title="jl-cat-renamed", color="bbbbbb")
+            @test updated["title"] == "jl-cat-renamed"
+            @test updated["color"] == "bbbbbb"
+
+            # DELETE soft-deletes — entry persists with state=3, not 404.
+            delete_category(et, id)
+            @test get_category(et, id)["state"] == 3
+        end
+
+        @test_throws ArgumentError update_category(:experiments, 1)
+        @test_throws ArgumentError create_category(:bogus; title="x")
+    end
+
+    @testset "Status CRUD" begin
+        for et in (:experiments, :items)
+            @test list_status(et) isa Vector
+
+            id = create_status(et; title="jl-status", color="123456", default=0)
+            st = get_status(et, id)
+            @test st["title"] == "jl-status"
+
+            update_status(et, id; title="jl-status-2")
+            @test get_status(et, id)["title"] == "jl-status-2"
+
+            delete_status(et, id)
+            @test get_status(et, id)["state"] == 3
+        end
+    end
 end

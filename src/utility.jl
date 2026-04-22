@@ -19,6 +19,32 @@ function instance_info()
 end
 
 """
+    search_extra_fields_keys(; q="", limit=0) -> Vector{Dict}
+
+Autocomplete for `extra_fields` metadata keys in use across the team.
+Results are sorted by frequency (most-used first) — useful for building
+form UIs or checking if a key name is already conventional.
+
+- `q::String` — substring match on key names (default `""` returns all)
+- `limit::Int` — `-1` = no limit, `0` = user default setting, otherwise cap
+
+Each row has `extra_fields_key` (the name) and `frequency` (count of uses).
+
+# Example
+```julia
+for k in search_extra_fields_keys(q="concentration")
+    println(k["extra_fields_key"], "  (used ", k["frequency"], " times)")
+end
+```
+"""
+function search_extra_fields_keys(; q::AbstractString="", limit::Integer=0)
+    _check_enabled()
+    url = "$(_elabftw_config.url)/api/v2/extra_fields_keys?q=$(HTTP.escapeuri(String(q)))&limit=$limit"
+    response = _elabftw_request(url)
+    return JSON.parse(String(response.body))
+end
+
+"""
     list_favorite_tags() -> Vector{Dict}
 
 List the current user's favorite tags.

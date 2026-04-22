@@ -8,6 +8,10 @@ mutable struct MockState
     favorite_tags::Vector{Dict{String, Any}}
     storage_units::Dict{Int, Dict{String, Any}}
     containers::Dict{Int, Dict{String, Any}}
+    # Statuslike collections keyed by path segment name: experiments_categories,
+    # resources_categories, experiments_status, items_status. Each maps id → entry.
+    statuslike::Dict{String, Dict{Int, Dict{String, Any}}}
+    extra_fields_keys::Vector{Dict{String, Any}}
     # Controlled failure injection for retry tests: each entry is a queue of
     # statuses to return on the next N requests to that path. Depleting the
     # queue drops through to normal routing. "Retry-After" is attached to 429s.
@@ -29,6 +33,15 @@ function MockState()
         Dict{String, Any}[],
         Dict{Int, Dict{String, Any}}(),
         Dict{Int, Dict{String, Any}}(),
+        Dict{String, Dict{Int, Dict{String, Any}}}(
+            "experiments_categories" => Dict(1 => Dict{String, Any}(
+                "id" => 1, "title" => "Default", "color" => "3498db", "is_default" => 1)),
+            "resources_categories" => Dict(1 => Dict{String, Any}(
+                "id" => 1, "title" => "General", "color" => "2ecc71", "is_default" => 1)),
+            "experiments_status" => Dict{Int, Dict{String, Any}}(),
+            "items_status" => Dict{Int, Dict{String, Any}}(),
+        ),
+        Dict{String, Any}[],
         @NamedTuple{path::String, status::Int, retry_after::Union{Int, Nothing}}[]
     )
 end
@@ -264,6 +277,17 @@ function route(state::MockState, method::String, rest::Vector{String}, req::HTTP
         return route_favtags(state, method, rest[2:end], req)
     end
 
+    # /api/v2/extra_fields_keys?q=...
+    if n == 1 && rest[1] == "extra_fields_keys" && method == "GET"
+        params = parse_query(req.target)
+        q = lowercase(get(params, "q", ""))
+        entries = state.extra_fields_keys
+        if !isempty(q)
+            entries = [e for e in entries if occursin(q, lowercase(String(e["extra_fields_key"])))]
+        end
+        return json_response(entries)
+    end
+
     # /api/v2/event/{id} — singular, per spec
     if n == 2 && rest[1] == "event"
         return route_event_single(state, method, rest[2], req)
@@ -471,6 +495,11 @@ function route_event_single(state::MockState, method::String, id_str::String, re
     return not_found()
 end
 
+const STATUSLIKE_RESOURCES = Set([
+    "experiments_categories", "resources_categories",
+    "experiments_status", "items_status",
+])
+
 function route_teams(state::MockState, method::String, rest::Vector{String}, req::HTTP.Request)
     n = length(rest)
 
@@ -482,15 +511,24 @@ function route_teams(state::MockState, method::String, rest::Vector{String}, req
                     "item_count" => get(t, "item_count", 0), "is_favorite" => 0, "team" => 1)
                     for (id, t) in state.team_tags]
                 return json_response(tags)
-            elseif resource == "experiments_categories"
-                return json_response([
-                    Dict("id" => 1, "title" => "Default", "color" => "#3498db", "is_default" => 1)
-                ])
-            elseif resource == "resources_categories"
-                return json_response([
-                    Dict("id" => 1, "title" => "General", "color" => "#2ecc71", "is_default" => 1)
-                ])
+            elseif resource in STATUSLIKE_RESOURCES
+                col = state.statuslike[resource]
+                entries = sort!(collect(values(col)); by=e -> e["id"])
+                return json_response(entries)
             end
+        elseif method == "POST" && resource in STATUSLIKE_RESOURCES
+            data = parse_json_body(req)
+            name = String(get(data, "name", ""))
+            isempty(name) && return HTTP.Response(400, "name required")
+            id = new_id!(state)
+            entry = Dict{String, Any}(
+                "id" => id,
+                "title" => name,
+                "color" => String(get(data, "color", "000000")),
+                "is_default" => Int(get(data, "default", 0)),
+            )
+            state.statuslike[resource][id] = entry
+            return created_response("/api/v2/teams/current/$resource/$id")
         end
     elseif n == 2
         resource = rest[1]
@@ -508,6 +546,25 @@ function route_teams(state::MockState, method::String, rest::Vector{String}, req
                 haskey(state.team_tags, sub_id) || return not_found()
                 delete!(state.team_tags, sub_id)
                 return ok_response()
+            end
+        elseif resource in STATUSLIKE_RESOURCES
+            col = state.statuslike[resource]
+            entry = get(col, sub_id, nothing)
+            if method == "GET"
+                isnothing(entry) && return not_found()
+                return json_response(entry)
+            elseif method == "PATCH"
+                isnothing(entry) && return not_found()
+                data = parse_json_body(req)
+                haskey(data, "title") && (entry["title"] = data["title"])
+                haskey(data, "color") && (entry["color"] = data["color"])
+                haskey(data, "is_default") && (entry["is_default"] = data["is_default"])
+                return json_response(entry)
+            elseif method == "DELETE"
+                isnothing(entry) && return not_found()
+                # Real server soft-deletes — entry persists with state=3.
+                entry["state"] = 3
+                return HTTP.Response(204, "")
             end
         end
     end
@@ -659,6 +716,11 @@ function route_subresource(state::MockState, method::String, entity::Dict, colle
                     end
                 end
                 return ok_response()
+            elseif method == "DELETE"
+                before = length(steps)
+                filter!(s -> s["id"] != step_id, steps)
+                length(steps) == before && return not_found()
+                return HTTP.Response(204, "")
             end
         end
         return not_found()

@@ -8,6 +8,12 @@ Instance information, favorite tags, and import/export.
 instance_info
 ```
 
+## Extra Fields Keys
+
+```@docs
+search_extra_fields_keys
+```
+
 ## Favorite Tags
 
 ```@docs

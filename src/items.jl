@@ -306,3 +306,10 @@ list_item_steps(id::Int) = _list_entity_steps("items", id)
 Mark an item step as finished.
 """
 finish_item_step(id::Int, step_id::Int) = _finish_entity_step("items", id, step_id)
+
+"""
+    delete_item_step(id::Int, step_id::Int)
+
+Delete an analysis step from an item.
+"""
+delete_item_step(id::Int, step_id::Int) = _delete_entity_step("items", id, step_id)
