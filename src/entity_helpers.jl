@@ -99,7 +99,9 @@ function _delete_entity(entity_type::String, id::Int)
 end
 
 """
-    _list_entities(entity_type; limit, offset, order, sort, query, tags, cat, owner) -> Vector{Dict}
+    _list_entities(entity_type; limit, offset, order, sort, query, tags,
+                   cat, owner, state, status, scope, extended,
+                   related, related_origin) -> Vector{Dict}
 
 List entities with pagination, sorting, and optional filtering.
 """
@@ -110,8 +112,14 @@ function _list_entities(entity_type::String;
     sort::Symbol = :desc,
     query::Union{String, Nothing} = nothing,
     tags::Vector{String} = String[],
-    cat::Union{Int, Nothing} = nothing,
-    owner::Union{Int, Nothing} = nothing
+    cat::Union{Int, Vector{Int}, Nothing} = nothing,
+    owner::Union{Int, Vector{Int}, Nothing} = nothing,
+    state::Union{Int, Nothing} = nothing,
+    status::Union{Int, Nothing} = nothing,
+    scope::Union{Int, Nothing} = nothing,
+    extended::Union{String, Nothing} = nothing,
+    related::Union{Int, Nothing} = nothing,
+    related_origin::Union{Symbol, Nothing} = nothing,
 )
     _check_enabled()
 
@@ -129,16 +137,37 @@ function _list_entities(entity_type::String;
         push!(params, "tags[]=$(HTTP.escapeuri(tag))")
     end
     if !isnothing(cat)
-        push!(params, "cat=$cat")
+        push!(params, "cat=" * _csv_ints(cat))
     end
     if !isnothing(owner)
-        push!(params, "owner=$owner")
+        push!(params, "owner=" * _csv_ints(owner))
+    end
+    if !isnothing(state)
+        push!(params, "state=$state")
+    end
+    if !isnothing(status)
+        push!(params, "status=$status")
+    end
+    if !isnothing(scope)
+        push!(params, "scope=$scope")
+    end
+    if !isnothing(extended) && !isempty(extended)
+        push!(params, "extended=$(HTTP.escapeuri(extended))")
+    end
+    if !isnothing(related)
+        push!(params, "related=$related")
+    end
+    if !isnothing(related_origin)
+        push!(params, "related_origin=$(String(related_origin))")
     end
 
     url = "$(_elabftw_config.url)/api/v2/$entity_type?" * join(params, "&")
     response = _elabftw_request(url)
     return JSON.parse(String(response.body))
 end
+
+_csv_ints(v::Int) = string(v)
+_csv_ints(v::Vector{Int}) = join(v, ",")
 
 """
     _duplicate_entity(entity_type, id) -> Int

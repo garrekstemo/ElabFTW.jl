@@ -32,6 +32,7 @@ include("mock_server.jl")
         include("test_team.jl")
         include("test_events.jl")
         include("test_compounds.jl")
+        include("test_storage.jl")
         include("test_utility.jl")
         include("test_batch.jl")
     finally

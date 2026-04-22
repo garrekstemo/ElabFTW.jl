@@ -22,34 +22,47 @@ end
     list_favorite_tags() -> Vector{Dict}
 
 List the current user's favorite tags.
+
+Each entry has `users_id`, `tags_id`, and `tag` (the tag string). Pass
+`tags_id` to [`remove_favorite_tag`](@ref).
 """
 function list_favorite_tags()
     _check_enabled()
-    url = "$(_elabftw_config.url)/api/v2/users/me/favorite_tags"
+    url = "$(_elabftw_config.url)/api/v2/favtags"
     response = _elabftw_request(url)
     return JSON.parse(String(response.body))
 end
 
 """
-    add_favorite_tag(tag_id::Int)
+    add_favorite_tag(tag::AbstractString)
 
-Add a tag to the current user's favorites.
+Add a tag to the current user's favorites by tag name.
+
+The tag must already exist in the current team (see [`list_team_tags`](@ref)).
+
+# Example
+```julia
+add_favorite_tag("broken")
+```
 """
-function add_favorite_tag(tag_id::Int)
+function add_favorite_tag(tag::AbstractString)
     _check_enabled()
-    url = "$(_elabftw_config.url)/api/v2/users/me/favorite_tags/$tag_id"
-    _elabftw_post(url, Dict{String, Any}())
+    url = "$(_elabftw_config.url)/api/v2/favtags"
+    _elabftw_post(url, Dict{String, Any}("tag" => tag))
     return nothing
 end
 
 """
-    remove_favorite_tag(tag_id::Int)
+    remove_favorite_tag(tags_id::Int)
 
 Remove a tag from the current user's favorites.
+
+`tags_id` is the team-level tag ID (the `tags_id` field returned by
+[`list_favorite_tags`](@ref), not the favorite entry itself).
 """
-function remove_favorite_tag(tag_id::Int)
+function remove_favorite_tag(tags_id::Int)
     _check_enabled()
-    url = "$(_elabftw_config.url)/api/v2/users/me/favorite_tags/$tag_id"
+    url = "$(_elabftw_config.url)/api/v2/favtags/$tags_id"
     _elabftw_delete(url)
     return nothing
 end

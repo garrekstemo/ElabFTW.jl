@@ -140,4 +140,27 @@
 
         delete_experiment(id)
     end
+
+    @testset "List filters" begin
+        a = create_experiment(title="filter-a", category=101)
+        b = create_experiment(title="filter-b", category=102)
+
+        # cat filter (single)
+        only_a = list_experiments(cat=101)
+        @test any(e -> e["id"] == a, only_a)
+        @test !any(e -> e["id"] == b, only_a)
+
+        # cat filter (vector)
+        both = list_experiments(cat=[101, 102])
+        @test any(e -> e["id"] == a, both)
+        @test any(e -> e["id"] == b, both)
+
+        # search_experiments exposes the same filters
+        res = search_experiments(query="filter", cat=102)
+        @test any(e -> e["id"] == b, res)
+        @test !any(e -> e["id"] == a, res)
+
+        delete_experiment(a)
+        delete_experiment(b)
+    end
 end

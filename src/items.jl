@@ -101,47 +101,69 @@ duplicate_item(id::Int) = _duplicate_entity("items", id)
 # =============================================================================
 
 """
-    list_items(; limit, offset, order, sort) -> Vector{Dict}
+    list_items(; limit, offset, order, sort,
+               cat, owner, state, status, scope,
+               related, related_origin) -> Vector{Dict}
 
-List items from eLabFTW with pagination and sorting.
+List items (resources) from eLabFTW with pagination, sorting, and filtering.
 
 # Arguments
 - `limit::Int` — Maximum number of results (default: 20)
 - `offset::Int` — Skip first N results (default: 0)
-- `order::Symbol` — Sort field: `:date`, `:title`, `:id` (default: `:date`)
+- `order::Symbol` — Sort field: `:date`, `:title`, `:id`, `:rating`, `:lastchange`, ... (default: `:date`)
 - `sort::Symbol` — Sort direction: `:desc`, `:asc` (default: `:desc`)
+- `cat` — Category ID (`items_type` ID), or `Vector{Int}` for multiple
+- `owner` — User ID, or `Vector{Int}` for multiple
+- `state::Int` — 1 Normal, 2 Archived, 3 Deleted (default shows Normal only)
+- `status::Int` — Status ID
+- `scope::Int` — 1 self, 2 team, 3 everything
+- `related::Int` + `related_origin::Symbol` — restrict to items linked to this entity
 
-# Example
+# Examples
 ```julia
-items = list_items(limit=10)
+list_items(limit=10)
+list_items(state=2)                # archived items
+list_items(cat=[104, 107])         # instruments + samples (QPS Lab)
+list_items(related=17, related_origin=:experiments)
 ```
 """
 function list_items(;
     limit::Int = 20,
     offset::Int = 0,
     order::Symbol = :date,
-    sort::Symbol = :desc
+    sort::Symbol = :desc,
+    cat::Union{Int, Vector{Int}, Nothing} = nothing,
+    owner::Union{Int, Vector{Int}, Nothing} = nothing,
+    state::Union{Int, Nothing} = nothing,
+    status::Union{Int, Nothing} = nothing,
+    scope::Union{Int, Nothing} = nothing,
+    related::Union{Int, Nothing} = nothing,
+    related_origin::Union{Symbol, Nothing} = nothing,
 )
-    return _list_entities("items"; limit=limit, offset=offset, order=order, sort=sort)
+    return _list_entities("items";
+        limit=limit, offset=offset, order=order, sort=sort,
+        cat=cat, owner=owner, state=state, status=status, scope=scope,
+        related=related, related_origin=related_origin)
 end
 
 """
-    search_items(; query, tags, limit, offset, order, sort) -> Vector{Dict}
+    search_items(; query, tags, limit, offset, order, sort,
+                 cat, owner, state, status, scope, extended,
+                 related, related_origin) -> Vector{Dict}
 
-Search items in eLabFTW by text query and/or tags.
+Search items (resources) in eLabFTW by text query, tags, and other filters.
 
-# Arguments
-- `query::String` — Full-text search term
-- `tags::Vector{String}` — Filter by tags (items must have ALL specified tags)
-- `limit::Int` — Maximum number of results (default: 20)
-- `offset::Int` — Skip first N results (default: 0)
-- `order::Symbol` — Sort field (default: `:date`)
-- `sort::Symbol` — Sort direction (default: `:desc`)
+All `list_items` filter kwargs apply, plus:
+
+- `query::String` — Full-text search (title, body, elabid).
+- `tags::Vector{String}` — Entries must have ALL listed tags.
+- `extended::String` — Advanced DSL (e.g. `"rating:2 and title:MoS2"`).
 
 # Examples
 ```julia
-results = search_items(query="MoS2")
-results = search_items(tags=["instrument"])
+search_items(query="MoS2")
+search_items(tags=["instrument"])
+search_items(state=2, cat=104)
 ```
 """
 function search_items(;
@@ -150,10 +172,20 @@ function search_items(;
     limit::Int = 20,
     offset::Int = 0,
     order::Symbol = :date,
-    sort::Symbol = :desc
+    sort::Symbol = :desc,
+    cat::Union{Int, Vector{Int}, Nothing} = nothing,
+    owner::Union{Int, Vector{Int}, Nothing} = nothing,
+    state::Union{Int, Nothing} = nothing,
+    status::Union{Int, Nothing} = nothing,
+    scope::Union{Int, Nothing} = nothing,
+    extended::Union{String, Nothing} = nothing,
+    related::Union{Int, Nothing} = nothing,
+    related_origin::Union{Symbol, Nothing} = nothing,
 )
     return _list_entities("items";
-        query=query, tags=tags, limit=limit, offset=offset, order=order, sort=sort)
+        query=query, tags=tags, limit=limit, offset=offset, order=order, sort=sort,
+        cat=cat, owner=owner, state=state, status=status, scope=scope,
+        extended=extended, related=related, related_origin=related_origin)
 end
 
 # =============================================================================

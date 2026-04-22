@@ -222,58 +222,79 @@ new_id = duplicate_experiment(42)
 duplicate_experiment(id::Int) = _duplicate_entity("experiments", id)
 
 """
-    list_experiments(; limit, offset, order, sort) -> Vector{Dict}
+    list_experiments(; limit, offset, order, sort,
+                     cat, owner, state, status, scope,
+                     related, related_origin) -> Vector{Dict}
 
-List experiments from eLabFTW with pagination and sorting.
+List experiments from eLabFTW with pagination, sorting, and filtering.
 
 # Arguments
 - `limit::Int` — Maximum number of results (default: 20)
 - `offset::Int` — Skip first N results (default: 0)
-- `order::Symbol` — Sort field: `:date`, `:title`, `:id` (default: `:date`)
+- `order::Symbol` — Sort field: `:date`, `:title`, `:id`, `:rating`, `:lastchange`, ... (default: `:date`)
 - `sort::Symbol` — Sort direction: `:desc`, `:asc` (default: `:desc`)
+- `cat` — Category ID, or `Vector{Int}` for multiple
+- `owner` — User ID, or `Vector{Int}` for multiple
+- `state::Int` — 1 Normal, 2 Archived, 3 Deleted (default shows Normal only)
+- `status::Int` — Status ID
+- `scope::Int` — 1 self, 2 team, 3 everything
+- `related::Int` + `related_origin::Symbol` — restrict to items linked to this entity
+  (`related_origin` is `:experiments` or `:items`)
 
-# Example
+# Examples
 ```julia
 # Most recent 10 experiments
-exps = list_experiments(limit=10)
+list_experiments(limit=10)
 
-# Paginate through results
+# Paginate
 page1 = list_experiments(limit=20, offset=0)
 page2 = list_experiments(limit=20, offset=20)
+
+# Archived experiments
+list_experiments(state=2)
+
+# Experiments linked to item 42
+list_experiments(related=42, related_origin=:items)
 ```
 """
 function list_experiments(;
     limit::Int = 20,
     offset::Int = 0,
     order::Symbol = :date,
-    sort::Symbol = :desc
+    sort::Symbol = :desc,
+    cat::Union{Int, Vector{Int}, Nothing} = nothing,
+    owner::Union{Int, Vector{Int}, Nothing} = nothing,
+    state::Union{Int, Nothing} = nothing,
+    status::Union{Int, Nothing} = nothing,
+    scope::Union{Int, Nothing} = nothing,
+    related::Union{Int, Nothing} = nothing,
+    related_origin::Union{Symbol, Nothing} = nothing,
 )
-    return _list_entities("experiments"; limit=limit, offset=offset, order=order, sort=sort)
+    return _list_entities("experiments";
+        limit=limit, offset=offset, order=order, sort=sort,
+        cat=cat, owner=owner, state=state, status=status, scope=scope,
+        related=related, related_origin=related_origin)
 end
 
 """
-    search_experiments(; query, tags, limit, offset, order, sort) -> Vector{Dict}
+    search_experiments(; query, tags, limit, offset, order, sort,
+                       cat, owner, state, status, scope, extended,
+                       related, related_origin) -> Vector{Dict}
 
-Search experiments in eLabFTW by text query and/or tags.
+Search experiments in eLabFTW by text query, tags, and other filters.
 
-# Arguments
-- `query::String` — Full-text search term (searches title and body)
-- `tags::Vector{String}` — Filter by tags (experiments must have ALL specified tags)
-- `limit::Int` — Maximum number of results (default: 20)
-- `offset::Int` — Skip first N results (default: 0)
-- `order::Symbol` — Sort field: `:date`, `:title`, `:id` (default: `:date`)
-- `sort::Symbol` — Sort direction: `:desc`, `:asc` (default: `:desc`)
+All `list_experiments` filter kwargs apply, plus:
+
+- `query::String` — Full-text search (title, body, elabid). Maps to `q=`.
+- `tags::Vector{String}` — Entries must have ALL listed tags.
+- `extended::String` — Advanced DSL (e.g. `"rating:2 and date>2026-01-01"`).
 
 # Examples
 ```julia
-# Search by text
-results = search_experiments(query="CN stretch")
-
-# Filter by tags
-results = search_experiments(tags=["ftir", "nh4scn"])
-
-# Combine query and tags
-results = search_experiments(query="peak fit", tags=["ftir"])
+search_experiments(query="CN stretch")
+search_experiments(tags=["ftir", "nh4scn"])
+search_experiments(state=2, cat=[7, 12])
+search_experiments(extended="rating:>3")
 ```
 """
 function search_experiments(;
@@ -282,10 +303,20 @@ function search_experiments(;
     limit::Int = 20,
     offset::Int = 0,
     order::Symbol = :date,
-    sort::Symbol = :desc
+    sort::Symbol = :desc,
+    cat::Union{Int, Vector{Int}, Nothing} = nothing,
+    owner::Union{Int, Vector{Int}, Nothing} = nothing,
+    state::Union{Int, Nothing} = nothing,
+    status::Union{Int, Nothing} = nothing,
+    scope::Union{Int, Nothing} = nothing,
+    extended::Union{String, Nothing} = nothing,
+    related::Union{Int, Nothing} = nothing,
+    related_origin::Union{Symbol, Nothing} = nothing,
 )
     return _list_entities("experiments";
-        query=query, tags=tags, limit=limit, offset=offset, order=order, sort=sort)
+        query=query, tags=tags, limit=limit, offset=offset, order=order, sort=sort,
+        cat=cat, owner=owner, state=state, status=status, scope=scope,
+        extended=extended, related=related, related_origin=related_origin)
 end
 
 # Experiment sub-resources: uploads, steps

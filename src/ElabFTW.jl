@@ -79,6 +79,7 @@ include("batch.jl")
 # Additional API coverage
 include("events.jl")
 include("compounds.jl")
+include("storage.jl")
 include("utility.jl")
 
 # High-level provenance and printing
@@ -142,6 +143,12 @@ export list_events, create_event, get_event, update_event, delete_event
 # Compounds
 export list_compounds, create_compound, get_compound, delete_compound
 export link_compound, list_compound_links
+
+# Storage units and containers
+export list_storage_units, get_storage_unit, create_storage_unit
+export rename_storage_unit, delete_storage_unit
+export list_containers, get_container, create_container
+export update_container, delete_container
 
 # Utility
 export instance_info
