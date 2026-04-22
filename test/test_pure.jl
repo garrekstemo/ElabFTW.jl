@@ -151,7 +151,8 @@ end
 
     @testset "Event guards" begin
         @test_throws ErrorException list_events()
-        @test_throws ErrorException create_event(title="test", start="2026-01-01", end_="2026-01-02")
+        @test_throws ErrorException create_event(item=1, title="test",
+            start="2026-01-01 00:00:00", end_="2026-01-02 00:00:00")
         @test_throws ErrorException get_event(1)
         @test_throws ErrorException update_event(1; title="test")
         @test_throws ErrorException delete_event(1)
@@ -169,7 +170,7 @@ end
     @testset "Utility guards" begin
         @test_throws ErrorException instance_info()
         @test_throws ErrorException list_favorite_tags()
-        @test_throws ErrorException add_favorite_tag(1)
+        @test_throws ErrorException add_favorite_tag("alpha")
         @test_throws ErrorException remove_favorite_tag(1)
     end
 

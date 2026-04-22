@@ -87,7 +87,8 @@ function create_entity!(state::MockState, collection::String, data::Dict)
         "category_title" => get(data, "category_title", ""),
         "metadata" => get(data, "metadata", nothing),
     )
-    for key in ("start", "end", "name", "cas_number", "smiles", "molecular_formula", "content_type", "item")
+    for key in ("start", "end", "name", "cas_number", "smiles", "molecular_formula",
+                "content_type", "item", "state", "userid")
         haskey(data, key) && (entity[key] = data[key])
     end
     state.collections[collection][id] = entity
@@ -135,6 +136,30 @@ function route(state::MockState, method::String, rest::Vector{String}, req::HTTP
         return created_response("/api/v2/experiments/$id")
     end
 
+    # /api/v2/favtags[/{id}]
+    if n >= 1 && rest[1] == "favtags"
+        return route_favtags(state, method, rest[2:end], req)
+    end
+
+    # /api/v2/event/{id} — singular, per spec
+    if n == 2 && rest[1] == "event"
+        return route_event_single(state, method, rest[2], req)
+    end
+
+    # /api/v2/events/{item_id} — POST books an item; other verbs on this path 404
+    # (single-event ops live at /event/{id}, handled above)
+    if n == 2 && rest[1] == "events"
+        if method == "POST"
+            item_id = tryparse(Int, rest[2])
+            isnothing(item_id) && return not_found()
+            data = parse_json_body(req)
+            data["item"] = item_id
+            id = create_entity!(state, "events", data)
+            return created_response("/api/v2/event/$id")
+        end
+        return not_found()
+    end
+
     # /api/v2/users/me[/...]
     if n >= 2 && rest[1] == "users" && rest[2] == "me"
         return route_users_me(state, method, rest[3:end], req)
@@ -157,6 +182,16 @@ function route(state::MockState, method::String, rest::Vector{String}, req::HTTP
             offset = parse(Int, get(params, "offset", "0"))
             query = get(params, "q", nothing)
             entities = collect(values(col))
+            state_filter = parse(Int, get(params, "state", "1"))
+            entities = filter(e -> get(e, "state", 1) == state_filter, entities)
+            if haskey(params, "cat")
+                cats = Set(parse.(Int, split(params["cat"], ",")))
+                entities = filter(e -> get(e, "category", nothing) in cats, entities)
+            end
+            if haskey(params, "owner")
+                owners = Set(parse.(Int, split(params["owner"], ",")))
+                entities = filter(e -> get(e, "userid", nothing) in owners, entities)
+            end
             if !isnothing(query) && !isempty(query)
                 q_lower = lowercase(query)
                 entities = filter(e -> occursin(q_lower, lowercase(get(e, "title", ""))), entities)
@@ -219,22 +254,68 @@ function route_users_me(state::MockState, method::String, rest::Vector{String}, 
         return json_response(Dict("fullname" => "Test User", "email" => "test@example.com"))
     end
 
-    if n >= 1 && rest[1] == "favorite_tags"
-        if n == 1
-            if method == "GET"
-                return json_response(state.favorite_tags)
-            end
-        elseif n == 2
-            tag_id = tryparse(Int, rest[2])
-            isnothing(tag_id) && return not_found()
-            if method == "POST"
-                push!(state.favorite_tags, Dict{String, Any}("id" => tag_id, "tag" => "tag_$tag_id"))
-                return created_response("/api/v2/users/me/favorite_tags/$tag_id")
-            elseif method == "DELETE"
-                filter!(t -> t["id"] != tag_id, state.favorite_tags)
-                return ok_response()
-            end
+    return not_found()
+end
+
+function route_favtags(state::MockState, method::String, rest::Vector{String}, req::HTTP.Request)
+    n = length(rest)
+
+    if n == 0
+        if method == "GET"
+            return json_response(state.favorite_tags)
+        elseif method == "POST"
+            data = parse_json_body(req)
+            tag = get(data, "tag", "")
+            isempty(tag) && return HTTP.Response(400, "tag required")
+            tags_id = new_id!(state)
+            push!(state.favorite_tags, Dict{String, Any}(
+                "users_id" => 1, "tags_id" => tags_id, "tag" => tag
+            ))
+            return created_response("/api/v2/favtags/$tags_id")
         end
+    elseif n == 1
+        tags_id = tryparse(Int, rest[1])
+        isnothing(tags_id) && return not_found()
+        if method == "DELETE"
+            filter!(t -> t["tags_id"] != tags_id, state.favorite_tags)
+            return ok_response()
+        end
+    end
+
+    return not_found()
+end
+
+function route_event_single(state::MockState, method::String, id_str::String, req::HTTP.Request)
+    id = tryparse(Int, id_str)
+    isnothing(id) && return not_found()
+    col = state.collections["events"]
+    entity = get(col, id, nothing)
+    isnothing(entity) && return not_found()
+
+    if method == "GET"
+        return json_response(entity)
+    elseif method == "PATCH"
+        data = parse_json_body(req)
+        target = get(data, "target", nothing)
+        isnothing(target) && return HTTP.Response(400, "Incorrect target parameter.")
+        if target == "title"
+            entity["title"] = get(data, "content", "")
+        elseif target == "datetime"
+            (haskey(data, "start") && haskey(data, "end")) ||
+                return HTTP.Response(400, "Missing required parameter(s): start, end.")
+            entity["start"] = data["start"]
+            entity["end"] = data["end"]
+        elseif target == "experiment"
+            entity["experiment"] = get(data, "id", nothing)
+        elseif target == "item_link"
+            entity["item_link"] = get(data, "id", nothing)
+        else
+            return HTTP.Response(400, "Incorrect target parameter.")
+        end
+        return ok_response()
+    elseif method == "DELETE"
+        delete!(col, id)
+        return ok_response()
     end
 
     return not_found()

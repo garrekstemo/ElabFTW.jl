@@ -15,14 +15,15 @@
         @test favs isa Vector
         initial_count = length(favs)
 
-        add_favorite_tag(99)
+        add_favorite_tag("alpha")
         favs = list_favorite_tags()
         @test length(favs) == initial_count + 1
-        @test any(t -> t["id"] == 99, favs)
+        entry = only(filter(t -> t["tag"] == "alpha", favs))
+        @test haskey(entry, "tags_id")
 
-        remove_favorite_tag(99)
+        remove_favorite_tag(entry["tags_id"])
         favs = list_favorite_tags()
         @test length(favs) == initial_count
-        @test !any(t -> t["id"] == 99, favs)
+        @test !any(t -> t["tag"] == "alpha", favs)
     end
 end

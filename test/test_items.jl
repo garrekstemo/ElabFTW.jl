@@ -141,4 +141,20 @@
         @test item["category"] == 5
         delete_item(id)
     end
+
+    @testset "List filters" begin
+        a = create_item(title="filt-a", category=201)
+        b = create_item(title="filt-b", category=202)
+
+        only_a = list_items(cat=201)
+        @test any(e -> e["id"] == a, only_a)
+        @test !any(e -> e["id"] == b, only_a)
+
+        both = search_items(query="filt", cat=[201, 202])
+        @test any(e -> e["id"] == a, both)
+        @test any(e -> e["id"] == b, both)
+
+        delete_item(a)
+        delete_item(b)
+    end
 end
