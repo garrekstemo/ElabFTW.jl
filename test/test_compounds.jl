@@ -12,7 +12,7 @@
         @test compound["cas_number"] == "1762-95-4"
 
         delete_compound(id)
-        @test_throws ErrorException get_compound(id)
+        @test_throws NotFoundError get_compound(id)
     end
 
     @testset "Compound with SMILES" begin

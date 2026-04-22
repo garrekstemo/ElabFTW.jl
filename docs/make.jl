@@ -23,6 +23,7 @@ makedocs(
         ],
         "Reference" => [
             "Configuration" => "reference/configuration.md",
+            "Errors and HTTP" => "reference/errors.md",
             "Experiments" => "reference/experiments.md",
             "Items" => "reference/items.md",
             "Links" => "reference/links.md",

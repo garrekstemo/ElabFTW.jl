@@ -30,6 +30,7 @@ function delete_experiments(;
     tags::Vector{String} = String[],
     dry_run::Bool = true
 )
+    _check_enabled()
     if isnothing(query) && isempty(tags)
         error("Must specify at least one of: query, tags")
     end
@@ -83,6 +84,7 @@ function tag_experiments(tag::String;
     query::Union{String, Nothing} = nothing,
     tags::Vector{String} = String[]
 )
+    _check_enabled()
     if isnothing(query) && isempty(tags)
         error("Must specify at least one of: query, tags")
     end
@@ -128,6 +130,7 @@ function update_experiments(;
     new_body::Union{String, Nothing} = nothing,
     append_body::Union{String, Nothing} = nothing
 )
+    _check_enabled()
     if isnothing(query) && isempty(tags)
         error("Must specify at least one of: query, tags")
     end
@@ -177,6 +180,7 @@ function delete_items(;
     tags::Vector{String} = String[],
     dry_run::Bool = true
 )
+    _check_enabled()
     if isnothing(query) && isempty(tags)
         error("Must specify at least one of: query, tags")
     end
@@ -221,6 +225,7 @@ function tag_items(tag::String;
     query::Union{String, Nothing} = nothing,
     tags::Vector{String} = String[]
 )
+    _check_enabled()
     if isnothing(query) && isempty(tags)
         error("Must specify at least one of: query, tags")
     end
@@ -260,6 +265,7 @@ function update_items(;
     new_body::Union{String, Nothing} = nothing,
     append_body::Union{String, Nothing} = nothing
 )
+    _check_enabled()
     if isnothing(query) && isempty(tags)
         error("Must specify at least one of: query, tags")
     end

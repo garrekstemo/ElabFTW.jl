@@ -32,7 +32,7 @@
     @test_throws ErrorException update_event(id; start="2026-03-01 10:00:00")
 
     delete_event(id)
-    @test_throws ErrorException get_event(id)
+    @test_throws NotFoundError get_event(id)
     delete_item(item_id)
     delete_experiment(exp_id)
 end

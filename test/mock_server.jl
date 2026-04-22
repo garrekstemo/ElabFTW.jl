@@ -8,6 +8,10 @@ mutable struct MockState
     favorite_tags::Vector{Dict{String, Any}}
     storage_units::Dict{Int, Dict{String, Any}}
     containers::Dict{Int, Dict{String, Any}}
+    # Controlled failure injection for retry tests: each entry is a queue of
+    # statuses to return on the next N requests to that path. Depleting the
+    # queue drops through to normal routing. "Retry-After" is attached to 429s.
+    inject_failures::Vector{@NamedTuple{path::String, status::Int, retry_after::Union{Int, Nothing}}}
 end
 
 function MockState()
@@ -24,8 +28,15 @@ function MockState()
         Dict{Int, Dict{String, Any}}(),
         Dict{String, Any}[],
         Dict{Int, Dict{String, Any}}(),
-        Dict{Int, Dict{String, Any}}()
+        Dict{Int, Dict{String, Any}}(),
+        @NamedTuple{path::String, status::Int, retry_after::Union{Int, Nothing}}[]
     )
+end
+
+function queue_failure!(state::MockState, path::String, status::Int;
+                       retry_after::Union{Int, Nothing}=nothing)
+    push!(state.inject_failures, (path=path, status=status, retry_after=retry_after))
+    return nothing
 end
 
 function storage_unit_full_path(state::MockState, unit::Dict)
@@ -150,6 +161,9 @@ function mock_handler(state::MockState)
 
         rest = String.(segments[3:end])
 
+        injected = maybe_inject(state, path)
+        isnothing(injected) || return injected
+
         try
             return route(state, method, rest, req)
         catch e
@@ -157,6 +171,17 @@ function mock_handler(state::MockState)
             return HTTP.Response(500, "Internal Server Error")
         end
     end
+end
+
+function maybe_inject(state::MockState, path::String)
+    isempty(state.inject_failures) && return nothing
+    idx = findfirst(f -> f.path == path, state.inject_failures)
+    isnothing(idx) && return nothing
+    f = state.inject_failures[idx]
+    deleteat!(state.inject_failures, idx)
+    resp = HTTP.Response(f.status, "injected")
+    isnothing(f.retry_after) || push!(resp.headers, "Retry-After" => string(f.retry_after))
+    return resp
 end
 
 function route(state::MockState, method::String, rest::Vector{String}, req::HTTP.Request)
