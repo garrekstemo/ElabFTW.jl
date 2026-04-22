@@ -12,10 +12,6 @@ client (`elabftw/elabapi-python`).
 
 ## High-value features (next up)
 
-- [ ] **Revisions** — `/api/v2/{entity_type}/{id}/revisions` — body history
-      and rollback. GET list, GET single, PATCH `{action: "replace"}` to
-      restore. Applies to experiments, items, experiments_templates.
-
 - [ ] **`PatchAction` on experiments/items** — spec's full enum is
       `lock`, `forcelock`, `forceunlock`, `exclusiveeditmode`, `pin`,
       `sign` (requires `passphrase` + `meaning`), `timestamp` (RFC 3161),
