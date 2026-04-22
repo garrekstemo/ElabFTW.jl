@@ -91,6 +91,22 @@
         @test length(steps) == 1
         @test steps[1]["id"] == s1
 
+        # update_step: plain fields
+        update_step(id, s1; body="Rewritten", deadline="2026-05-01 12:00:00")
+        step = first(filter(s -> s["id"] == s1, list_steps(id)))
+        @test step["body"] == "Rewritten"
+        @test step["deadline"] == "2026-05-01 12:00:00"
+
+        # notif_step toggles once deadline is set
+        notif_step(id, s1)
+        @test first(filter(s -> s["id"] == s1, list_steps(id)))["deadline_notif"] == 1
+        notif_step(id, s1)
+        @test first(filter(s -> s["id"] == s1, list_steps(id)))["deadline_notif"] == 0
+
+        # Argument validation
+        @test_throws ArgumentError update_step(id, s1)
+        @test_throws ArgumentError update_step(id, s1; is_immutable=99)
+
         delete_experiment(id)
     end
 

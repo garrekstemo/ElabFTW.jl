@@ -313,3 +313,23 @@ finish_item_step(id::Int, step_id::Int) = _finish_entity_step("items", id, step_
 Delete an analysis step from an item.
 """
 delete_item_step(id::Int, step_id::Int) = _delete_entity_step("items", id, step_id)
+
+"""
+    update_item_step(id::Int, step_id::Int; body=nothing, deadline=nothing, is_immutable=nothing)
+
+Update an item step's body, deadline, or immutability. See
+[`update_step`](@ref) for argument semantics.
+"""
+update_item_step(id::Int, step_id::Int;
+    body::Union{String, Nothing}=nothing,
+    deadline::Union{String, Nothing}=nothing,
+    is_immutable::Union{Int, Nothing}=nothing,
+) = _update_entity_step("items", id, step_id;
+    body=body, deadline=deadline, is_immutable=is_immutable)
+
+"""
+    notif_item_step(id::Int, step_id::Int)
+
+Toggle the deadline notification on an item step. See [`notif_step`](@ref).
+"""
+notif_item_step(id::Int, step_id::Int) = _notif_entity_step("items", id, step_id)

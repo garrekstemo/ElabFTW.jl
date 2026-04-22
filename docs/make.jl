@@ -19,6 +19,10 @@ makedocs(
         "How-To Guides" => [
             "Tagging Conventions" => "howto/tagging_conventions.md",
             "Idempotent Logging" => "howto/idempotent_logging.md",
+            "Batch Operations" => "howto/batch_operations.md",
+            "Compounds and Chemical Inventory" => "howto/compounds.md",
+            "Scheduler Events and Bookings" => "howto/events.md",
+            "Metadata Forms and Extra Fields" => "howto/extra_fields.md",
         ],
         "Reference" => [
             "Configuration" => "reference/configuration.md",

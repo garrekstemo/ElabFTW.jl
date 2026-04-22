@@ -43,6 +43,8 @@ add_step
 list_steps
 finish_step
 delete_step
+update_step
+notif_step
 ```
 
 ## Experiment Links

@@ -440,6 +440,35 @@ Delete an analysis step from an experiment.
 delete_step(id::Int, step_id::Int) = _delete_entity_step("experiments", id, step_id)
 
 """
+    update_step(id::Int, step_id::Int; body=nothing, deadline=nothing, is_immutable=nothing)
+
+Update a step's body, deadline, or immutability. At least one field must
+be provided. `deadline` is a datetime string (`"YYYY-MM-DD HH:MM:SS"`);
+`is_immutable` is `0` or `1`.
+
+# Example
+```julia
+update_step(42, 7; body="Baseline correct using the Rubberband algorithm")
+update_step(42, 7; deadline="2026-05-01 12:00:00")
+```
+"""
+update_step(id::Int, step_id::Int;
+    body::Union{String, Nothing}=nothing,
+    deadline::Union{String, Nothing}=nothing,
+    is_immutable::Union{Int, Nothing}=nothing,
+) = _update_entity_step("experiments", id, step_id;
+    body=body, deadline=deadline, is_immutable=is_immutable)
+
+"""
+    notif_step(id::Int, step_id::Int)
+
+Toggle the deadline notification flag on a step. The step must have a
+`deadline` already set (use [`update_step`](@ref)) — the server returns
+HTTP 500 otherwise. Calling this twice cycles the flag off/on.
+"""
+notif_step(id::Int, step_id::Int) = _notif_entity_step("experiments", id, step_id)
+
+"""
     link_experiments(id1, id2)
 
 Create a link between two experiments. The link appears on experiment `id1`

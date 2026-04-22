@@ -40,4 +40,6 @@ add_item_step
 list_item_steps
 finish_item_step
 delete_item_step
+update_item_step
+notif_item_step
 ```
