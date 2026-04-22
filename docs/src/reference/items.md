@@ -28,6 +28,8 @@ clear_item_tags
 ```@docs
 upload_to_item
 list_item_uploads
+update_item_upload
+replace_item_upload
 delete_item_upload
 ```
 

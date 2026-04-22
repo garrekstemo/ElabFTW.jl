@@ -322,11 +322,62 @@ end
 # Experiment sub-resources: uploads, steps
 
 """
-    list_experiment_uploads(id::Int) -> Vector{Dict}
+    list_experiment_uploads(id::Int; state=nothing) -> Vector{Dict}
 
-List all file uploads on an experiment.
+List file uploads on an experiment.
+
+`state` filters by upload state: `1` Normal (default when omitted),
+`2` Archived, `3` Deleted. Pass a `Vector{Int}` for multiple states
+(sent as a comma-separated list).
+
+# Example
+```julia
+list_experiment_uploads(42)                 # just active uploads
+list_experiment_uploads(42; state=2)        # only archived
+list_experiment_uploads(42; state=[1, 2])   # active and archived
+```
 """
-list_experiment_uploads(id::Int) = _list_entity_uploads("experiments", id)
+list_experiment_uploads(id::Int; state::Union{Int, Vector{Int}, Nothing}=nothing) =
+    _list_entity_uploads("experiments", id; state=state)
+
+"""
+    update_experiment_upload(id::Int, upload_id::Int; real_name=nothing, comment=nothing, state=nothing) -> Dict
+
+Modify upload attributes without re-uploading the file. Returns the updated
+upload record.
+
+- `real_name::String` — new filename
+- `comment::String` — replace the upload's comment
+- `state::Int` — `1` Normal, `2` Archived, `3` Deleted
+
+At least one of the three must be provided.
+
+# Example
+```julia
+update_experiment_upload(42, 7; real_name="peak-fit.pdf")   # rename
+update_experiment_upload(42, 7; state=2)                     # archive
+```
+"""
+update_experiment_upload(id::Int, upload_id::Int;
+    real_name::Union{String, Nothing}=nothing,
+    comment::Union{String, Nothing}=nothing,
+    state::Union{Int, Nothing}=nothing,
+) = _update_entity_upload("experiments", id, upload_id;
+        real_name=real_name, comment=comment, state=state)
+
+"""
+    replace_experiment_upload(id::Int, upload_id::Int, filepath::String; comment="") -> Int
+
+Replace an existing experiment upload with a new file. The previous file is
+archived (state=2), not deleted. Returns the new upload's ID.
+
+# Example
+```julia
+new_id = replace_experiment_upload(42, 7, "figures/fit_v2.pdf"; comment="Updated fit")
+```
+"""
+replace_experiment_upload(id::Int, upload_id::Int, filepath::String; comment::String="") =
+    _replace_entity_upload("experiments", id, upload_id, filepath; comment=comment)
 
 """
     delete_experiment_upload(id::Int, upload_id::Int)

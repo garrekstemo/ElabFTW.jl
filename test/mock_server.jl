@@ -668,10 +668,25 @@ function route_subresource(state::MockState, method::String, entity::Dict, colle
     if subresource == "uploads"
         uploads = entity["uploads"]::Vector{Any}
         if n == 0
-            method == "GET" && return json_response(uploads)
+            if method == "GET"
+                params = parse_query(req.target)
+                if haskey(params, "state")
+                    wanted = Set(parse.(Int, split(params["state"], ",")))
+                    filtered = [u for u in uploads if get(u, "state", 1) in wanted]
+                    return json_response(filtered)
+                end
+                # Default = state 1 (Normal) only, matching real server
+                filtered = [u for u in uploads if get(u, "state", 1) == 1]
+                return json_response(filtered)
+            end
             if method == "POST"
                 upload_id = new_id!(state)
-                push!(uploads, Dict{String, Any}("id" => upload_id, "real_name" => "test_file.txt", "comment" => ""))
+                push!(uploads, Dict{String, Any}(
+                    "id" => upload_id,
+                    "real_name" => "test_file.txt",
+                    "comment" => "",
+                    "state" => 1,
+                ))
                 return created_response("/api/v2/$collection/$entity_id/uploads/$upload_id")
             end
         elseif n == 1
@@ -682,6 +697,31 @@ function route_subresource(state::MockState, method::String, entity::Dict, colle
                     upload["id"] == upload_id && return json_response(upload)
                 end
                 return not_found()
+            elseif method == "PATCH"
+                data = parse_json_body(req)
+                get(data, "action", "") == "update" ||
+                    return HTTP.Response(400, "action=update required")
+                for upload in uploads
+                    upload["id"] == upload_id || continue
+                    haskey(data, "real_name") && (upload["real_name"] = data["real_name"])
+                    haskey(data, "comment") && (upload["comment"] = data["comment"])
+                    haskey(data, "state") && (upload["state"] = data["state"])
+                    return json_response(upload)
+                end
+                return not_found()
+            elseif method == "POST"
+                # Replace: archive existing (state=2), create new (state=1)
+                existing_idx = findfirst(u -> u["id"] == upload_id, uploads)
+                isnothing(existing_idx) && return not_found()
+                uploads[existing_idx]["state"] = 2
+                new_id = new_id!(state)
+                push!(uploads, Dict{String, Any}(
+                    "id" => new_id,
+                    "real_name" => "replaced_file.txt",
+                    "comment" => "",
+                    "state" => 1,
+                ))
+                return created_response("/api/v2/$collection/$entity_id/uploads/$new_id")
             elseif method == "DELETE"
                 filter!(u -> u["id"] != upload_id, uploads)
                 return ok_response()

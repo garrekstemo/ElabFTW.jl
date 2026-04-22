@@ -101,9 +101,34 @@
             uploads = list_experiment_uploads(id)
             @test length(uploads) == 1
 
+            # Rename via PATCH
+            updated = update_experiment_upload(id, upload_id; real_name="renamed.txt")
+            @test updated["real_name"] == "renamed.txt"
+
+            # Archive (state=2) removes from default listing, visible with state=2
+            update_experiment_upload(id, upload_id; state=2)
+            @test isempty(list_experiment_uploads(id))
+            @test length(list_experiment_uploads(id; state=2)) == 1
+            @test length(list_experiment_uploads(id; state=[1, 2])) == 1
+
+            # Restore, then replace with a new file
+            update_experiment_upload(id, upload_id; state=1)
+            new_id = replace_experiment_upload(id, upload_id, tmpfile; comment="v2")
+            @test new_id != upload_id
+            # Old is archived; new is active
+            active = list_experiment_uploads(id)
+            @test length(active) == 1
+            @test active[1]["id"] == new_id
+            @test length(list_experiment_uploads(id; state=2)) == 1
+
+            # Argument validation
+            @test_throws ArgumentError update_experiment_upload(id, new_id)
+            @test_throws ArgumentError update_experiment_upload(id, new_id; state=99)
+
+            delete_experiment_upload(id, new_id)
+            # Archived original still exists — delete it too for cleanup
             delete_experiment_upload(id, upload_id)
-            uploads = list_experiment_uploads(id)
-            @test isempty(uploads)
+            @test isempty(list_experiment_uploads(id; state=[1, 2, 3]))
         finally
             isfile(tmpfile) && rm(tmpfile)
         end
