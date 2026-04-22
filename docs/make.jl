@@ -25,6 +25,7 @@ makedocs(
             "Errors and HTTP" => "reference/errors.md",
             "Experiments" => "reference/experiments.md",
             "Items" => "reference/items.md",
+            "Actions" => "reference/actions.md",
             "Links" => "reference/links.md",
             "Comments" => "reference/comments.md",
             "Templates" => "reference/templates.md",
