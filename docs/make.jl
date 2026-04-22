@@ -6,7 +6,6 @@ makedocs(
     modules = [ElabFTW],
     remotes = nothing,
     checkdocs = :exports,
-    warnonly = [:missing_docs, :cross_references],
     format = Documenter.HTML(
         prettyurls = get(ENV, "CI", nothing) == "true",
         repolink = "https://github.com/garrekstemo/ElabFTW.jl",
