@@ -27,6 +27,72 @@
         @test !any(t -> t["tag"] == "alpha", favs)
     end
 
+    @testset "download_*_upload caches bytes" begin
+        item_id = create_item(title="cache-dl-probe")
+        tmpfile = tempname() * ".txt"
+        write(tmpfile, "payload")
+        upload_id = upload_to_item(item_id, tmpfile; comment="probe")
+
+        # First call downloads + caches; second hits the cache directly.
+        path1 = download_item_upload(item_id, upload_id; filename="probe.txt")
+        @test isfile(path1)
+        mtime1 = mtime(path1)
+        path2 = download_item_upload(item_id, upload_id; filename="probe.txt")
+        @test path1 == path2
+        @test mtime(path2) == mtime1  # cache hit didn't rewrite
+
+        # Legacy alias
+        path3 = download_elabftw_file(item_id, upload_id; filename="probe.txt")
+        @test path3 == path1
+
+        # Experiments branch
+        exp_id = create_experiment(title="cache-exp-probe")
+        e_upload = upload_to_experiment(exp_id, tmpfile)
+        p_exp = download_experiment_upload(exp_id, e_upload; filename="exp.txt")
+        @test isfile(p_exp)
+
+        # Cache info shows non-zero now
+        info = elabftw_cache_info()
+        @test info.files >= 2
+        @test info.size_mb >= 0
+
+        clear_elabftw_cache()
+        info = elabftw_cache_info()
+        @test info.files == 0
+
+        rm(tmpfile; force=true)
+        delete_experiment(exp_id)
+        delete_item(item_id)
+    end
+
+    @testset "create_export / download_export" begin
+        id = create_experiment(title="export-probe")
+        bytes = create_export(:experiments, id)
+        @test bytes isa AbstractVector{UInt8}
+        @test !isempty(bytes)
+
+        tmp = tempname()
+        returned = download_export(:experiments, id, tmp)
+        @test returned == tmp
+        @test isfile(tmp)
+        rm(tmp; force=true)
+
+        delete_experiment(id)
+    end
+
+    @testset "import_file" begin
+        tmpfile = tempname() * ".eln"
+        write(tmpfile, "fake eln payload")
+        id = import_file(tmpfile)
+        @test id isa Int
+
+        # Bad path → ArgumentError before any HTTP call
+        @test_throws ArgumentError import_file("/nonexistent/path.eln")
+
+        rm(tmpfile; force=true)
+        delete_experiment(id)
+    end
+
     @testset "search_extra_fields_keys" begin
         # Seed the mock state directly — the server auto-populates this from
         # real entity metadata, which the mock doesn't track.

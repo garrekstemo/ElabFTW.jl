@@ -7,6 +7,10 @@
         @test_throws ArgumentError tag_items("tag")
         @test_throws ArgumentError update_items(new_body="test")
         @test_throws ArgumentError update_experiments(query="q")  # no body specified
+        @test_throws ArgumentError update_items(query="q")
+        # Vector overloads enforce the same guards
+        @test_throws ArgumentError tag_experiments(["a", "b"])
+        @test_throws ArgumentError tag_items(["a", "b"])
     end
 
     @testset "delete_experiments dry_run" begin
@@ -108,5 +112,35 @@
 
         ids = tag_experiments("tag"; query="zzz-nonexistent-zzz")
         @test isempty(ids)
+
+        # Also the items side + delete/update with no matches
+        @test isempty(delete_items(query="zzz-nonexistent-zzz"; dry_run=true))
+        @test isempty(tag_items("tag"; query="zzz-nonexistent-zzz"))
+        @test isempty(update_experiments(query="zzz-nonexistent-zzz"; new_body="x"))
+        @test isempty(update_items(query="zzz-nonexistent-zzz"; new_body="x"))
+    end
+
+    @testset "dry_run=false actually deletes" begin
+        id = create_experiment(title="real-delete-exp")
+        ids = delete_experiments(query="real-delete-exp"; dry_run=false)
+        @test id in ids
+        @test_throws NotFoundError get_experiment(id)
+
+        iid = create_item(title="real-delete-item")
+        ids = delete_items(query="real-delete-item"; dry_run=false)
+        @test iid in ids
+        @test_throws NotFoundError get_item(iid)
+    end
+
+    @testset "append_body path" begin
+        id = create_experiment(title="append-exp", body="start")
+        update_experiments(query="append-exp"; append_body=" + more")
+        @test get_experiment(id)["body"] == "start + more"
+        delete_experiment(id)
+
+        iid = create_item(title="append-item", body="orig")
+        update_items(query="append-item"; append_body=" + extra")
+        @test get_item(iid)["body"] == "orig + extra"
+        delete_item(iid)
     end
 end
