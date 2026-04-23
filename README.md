@@ -7,6 +7,21 @@
 
 A Julia client for the [eLabFTW](https://www.elabftw.net/) API v2.
 
+## Installation
+
+```julia
+using Pkg
+Pkg.add("ElabFTW")
+```
+
+Until the package is registered in the General registry, install from GitHub:
+
+```julia
+Pkg.add(url="https://github.com/garrekstemo/ElabFTW.jl")
+```
+
+Requires Julia 1.10 or later.
+
 ## Quick Start
 
 ```julia
