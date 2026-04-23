@@ -53,14 +53,20 @@ function _get_entity(entity_type::String, id::Int)
 end
 
 """
-    _update_entity(entity_type, id; title, body, metadata)
+    _update_entity(entity_type, id; title, body, metadata, kwargs...)
 
-Update an existing entity.
+Update an existing entity. `title`, `body`, and `metadata` have special
+handling (body sets `content_type: 2` Markdown); every other kwarg is
+forwarded verbatim into the PATCH body. This reaches fields like `rating`,
+`status`, `date`, `canread`, `canwrite`, `custom_id` on experiments and
+`is_bookable`, `canbook_base`, `book_max_minutes`, `is_procurable` on items
+without enumerating them all.
 """
 function _update_entity(entity_type::String, id::Int;
     title::Union{String, Nothing} = nothing,
     body::Union{String, Nothing} = nothing,
-    metadata::Union{Dict, Nothing} = nothing
+    metadata::Union{Dict, Nothing} = nothing,
+    kwargs...
 )
     _check_enabled()
     url = "$(_elabftw_config.url)/api/v2/$entity_type/$id"
@@ -75,6 +81,9 @@ function _update_entity(entity_type::String, id::Int;
     end
     if !isnothing(metadata)
         payload["metadata"] = metadata
+    end
+    for (k, v) in kwargs
+        payload[String(k)] = v
     end
 
     if isempty(payload)
@@ -174,10 +183,18 @@ _csv_ints(v::Vector{Int}) = join(v, ",")
 
 Duplicate an entity. Returns the new entity ID.
 """
-function _duplicate_entity(entity_type::String, id::Int)
+function _duplicate_entity(entity_type::String, id::Int;
+    copy_files::Bool=false,
+    link_to_original::Bool=true,
+)
     _check_enabled()
     url = "$(_elabftw_config.url)/api/v2/$entity_type/$id"
-    response = _elabftw_post(url, Dict("action" => "duplicate"))
+    payload = Dict{String, Any}(
+        "action" => "duplicate",
+        "copyFiles" => copy_files,
+        "linkToOriginal" => link_to_original,
+    )
+    response = _elabftw_post(url, payload)
     return _parse_id_from_response(response)
 end
 

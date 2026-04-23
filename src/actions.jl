@@ -98,6 +98,37 @@ pin_experiment(id::Int) = _patch_action(:experiments, id, "pin")
 pin_item(id::Int) = _patch_action(:items, id, "pin")
 
 """
+    force_lock_experiment(id::Int) -> Dict
+
+Admin override — lock an experiment regardless of who locked it or the
+current lock state. Unlike [`lock_experiment`](@ref), this is not a toggle.
+Requires admin permission on the team; non-admin callers get `PermissionError`.
+"""
+force_lock_experiment(id::Int) = _patch_action(:experiments, id, "forcelock")
+
+"""
+    force_lock_item(id::Int) -> Dict
+
+Admin override for item lock. See [`force_lock_experiment`](@ref).
+"""
+force_lock_item(id::Int) = _patch_action(:items, id, "forcelock")
+
+"""
+    force_unlock_experiment(id::Int) -> Dict
+
+Admin override — unlock an experiment that was locked by another user.
+Requires admin permission.
+"""
+force_unlock_experiment(id::Int) = _patch_action(:experiments, id, "forceunlock")
+
+"""
+    force_unlock_item(id::Int) -> Dict
+
+Admin override for item unlock. See [`force_unlock_experiment`](@ref).
+"""
+force_unlock_item(id::Int) = _patch_action(:items, id, "forceunlock")
+
+"""
     timestamp_experiment(id::Int) -> Dict
 
 RFC 3161 timestamp an experiment. Requires the eLabFTW instance to be

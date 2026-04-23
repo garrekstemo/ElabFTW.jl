@@ -45,27 +45,30 @@ item["title"]
 get_item(id::Int) = _get_entity("items", id)
 
 """
-    update_item(id::Int; title, body, metadata)
+    update_item(id::Int; title, body, metadata, kwargs...)
 
-Update an existing item.
-
-# Arguments
-- `id::Int` — Item ID
-- `title::String` — New title (optional)
-- `body::String` — New body content (optional)
-- `metadata::Union{Dict, Nothing}` — Extra metadata JSON (optional)
+Update an existing item. Beyond `title` / `body` / `metadata`, any field on
+the item schema can be passed as a keyword and is forwarded verbatim — e.g.
+`rating=4`, `status=5`, `date="2026-04-23"`, `custom_id="MoS2-A"`, plus the
+booking schema: `is_bookable=1`, `canbook_base=30`, `book_max_minutes=120`,
+`book_max_slots=3`, `book_can_overlap=0`, `book_is_cancellable=1`,
+`book_cancel_minutes=30`, `book_users_can_in_past=0`,
+`booking_window_days=60`, `is_procurable=1`.
 
 # Example
 ```julia
 update_item(42; body="Updated sample description")
+update_item(42; is_bookable=1, book_max_minutes=120, book_cancel_minutes=30)
 ```
 """
 function update_item(id::Int;
     title::Union{String, Nothing} = nothing,
     body::Union{String, Nothing} = nothing,
-    metadata::Union{Dict, Nothing} = nothing
+    metadata::Union{Dict, Nothing} = nothing,
+    kwargs...
 )
-    return _update_entity("items", id; title=title, body=body, metadata=metadata)
+    return _update_entity("items", id;
+        title=title, body=body, metadata=metadata, kwargs...)
 end
 
 """
@@ -80,21 +83,19 @@ delete_item(42)
 """
 function delete_item(id::Int)
     _delete_entity("items", id)
-    println("Deleted item $id")
+    @info "Deleted item" id
     return nothing
 end
 
 """
-    duplicate_item(id::Int) -> Int
+    duplicate_item(id::Int; copy_files=false, link_to_original=true) -> Int
 
-Duplicate an item. Returns the new item ID.
-
-# Example
-```julia
-new_id = duplicate_item(42)
-```
+Duplicate an item. Returns the new item ID. See [`duplicate_experiment`](@ref)
+for kwarg semantics.
 """
-duplicate_item(id::Int) = _duplicate_entity("items", id)
+duplicate_item(id::Int; copy_files::Bool=false, link_to_original::Bool=true) =
+    _duplicate_entity("items", id;
+        copy_files=copy_files, link_to_original=link_to_original)
 
 # =============================================================================
 # List / Search
@@ -322,7 +323,7 @@ Update an item step's body, deadline, or immutability. See
 """
 update_item_step(id::Int, step_id::Int;
     body::Union{String, Nothing}=nothing,
-    deadline::Union{String, Nothing}=nothing,
+    deadline::Union{AbstractString, DateTime, Nothing}=nothing,
     is_immutable::Union{Int, Nothing}=nothing,
 ) = _update_entity_step("items", id, step_id;
     body=body, deadline=deadline, is_immutable=is_immutable)

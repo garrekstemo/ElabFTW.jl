@@ -46,39 +46,39 @@ try
 
             @testset "Single tag" begin
                 tag_experiment(experiment_id, "test-single")
-                tags = list_tags(experiment_id)
+                tags = list_experiment_tags(experiment_id)
                 @test any(t -> t["tag"] == "test-single", tags)
             end
 
             @testset "Batch tags" begin
                 tag_experiment(experiment_id, ["test-batch-a", "test-batch-b"])
-                tags = list_tags(experiment_id)
+                tags = list_experiment_tags(experiment_id)
                 names = [t["tag"] for t in tags]
                 @test "test-batch-a" in names
                 @test "test-batch-b" in names
             end
 
             @testset "List tags" begin
-                tags = list_tags(experiment_id)
+                tags = list_experiment_tags(experiment_id)
                 @test length(tags) >= 3
                 @test all(t -> haskey(t, "tag_id") && haskey(t, "tag"), tags)
             end
 
             @testset "Untag (unreference) single tag" begin
-                tags_before = list_tags(experiment_id)
+                tags_before = list_experiment_tags(experiment_id)
                 target = first(t for t in tags_before if t["tag"] == "test-single")
                 untag_experiment(experiment_id, target["tag_id"])
 
-                tags_after = list_tags(experiment_id)
+                tags_after = list_experiment_tags(experiment_id)
                 @test !any(t -> t["tag"] == "test-single", tags_after)
                 @test length(tags_after) == length(tags_before) - 1
             end
 
             @testset "Clear all tags" begin
-                @test length(list_tags(experiment_id)) >= 2
+                @test length(list_experiment_tags(experiment_id)) >= 2
 
-                clear_tags(experiment_id)
-                tags = list_tags(experiment_id)
+                clear_experiment_tags(experiment_id)
+                tags = list_experiment_tags(experiment_id)
                 @test isempty(tags)
             end
 

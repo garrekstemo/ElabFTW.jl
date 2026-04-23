@@ -63,27 +63,29 @@ function create_from_template(template_id::Int;
 end
 
 """
-    update_experiment(id::Int; title, body, metadata)
+    update_experiment(id::Int; title, body, metadata, kwargs...)
 
-Update an existing experiment in eLabFTW.
-
-# Arguments
-- `id::Int` — Experiment ID
-- `title::String` — New title (optional)
-- `body::String` — New body content (optional)
-- `metadata::Union{Dict, Nothing}` — Extra metadata JSON (optional)
+Update an existing experiment. `title`, `body`, and `metadata` are the
+common fields; any other writable field on the experiment schema can be
+passed as an additional keyword and is forwarded verbatim — e.g.
+`rating=4`, `status=7`, `date="2026-04-23"`, `custom_id="FTIR-042"`,
+`canread_base=30`, `canwrite_base=20`, `hide_main_text=1`.
 
 # Example
 ```julia
 update_experiment(42; body="Updated analysis results")
+update_experiment(42; rating=4, status=7)
+update_experiment(42; custom_id="FTIR-042", canread_base=30)
 ```
 """
 function update_experiment(id::Int;
     title::Union{String, Nothing} = nothing,
     body::Union{String, Nothing} = nothing,
-    metadata::Union{Dict, Nothing} = nothing
+    metadata::Union{Dict, Nothing} = nothing,
+    kwargs...
 )
-    return _update_entity("experiments", id; title=title, body=body, metadata=metadata)
+    return _update_entity("experiments", id;
+        title=title, body=body, metadata=metadata, kwargs...)
 end
 
 """
@@ -131,53 +133,47 @@ tag_experiment(42, ["ftir", "nh4scn", "peak_fit"])
 tag_experiment(id::Int, tags::Vector{String}) = _tag_entity("experiments", id, tags)
 
 """
-    list_tags(id::Int) -> Vector{Dict}
+    list_experiment_tags(id::Int) -> Vector{Dict}
 
 List all tags on an experiment. Returns an array of tag objects with
 `"tag_id"` and `"tag"` keys.
 
 # Example
 ```julia
-tags = list_tags(42)
+tags = list_experiment_tags(42)
 for t in tags
-    println(t["tag_id"], ": ", t["tag"])
+    @info t["tag_id"] tag=t["tag"]
 end
 ```
 """
-list_tags(id::Int) = _list_entity_tags("experiments", id)
-
-# Explicit alias for consistency with new entity types
-const list_experiment_tags = list_tags
+list_experiment_tags(id::Int) = _list_entity_tags("experiments", id)
 
 """
     untag_experiment(id::Int, tag_id::Int)
 
 Remove a single tag from an experiment (does not delete the team-level tag).
 
-Use `list_tags(id)` to find the tag ID (the `"tag_id"` field).
+Use [`list_experiment_tags`](@ref) to find the tag ID (the `"tag_id"` field).
 
 # Example
 ```julia
-tags = list_tags(42)
+tags = list_experiment_tags(42)
 untag_experiment(42, tags[1]["tag_id"])
 ```
 """
 untag_experiment(id::Int, tag_id::Int) = _untag_entity("experiments", id, tag_id)
 
 """
-    clear_tags(id::Int)
+    clear_experiment_tags(id::Int)
 
 Remove all tags from an experiment.
 
 # Example
 ```julia
-clear_tags(42)
+clear_experiment_tags(42)
 ```
 """
-clear_tags(id::Int) = _clear_entity_tags("experiments", id)
-
-# Explicit alias for consistency with new entity types
-const clear_experiment_tags = clear_tags
+clear_experiment_tags(id::Int) = _clear_entity_tags("experiments", id)
 
 """
     get_experiment(id::Int) -> Dict
@@ -205,21 +201,28 @@ delete_experiment(7377)
 """
 function delete_experiment(id::Int)
     _delete_entity("experiments", id)
-    println("Deleted experiment $id")
+    @info "Deleted experiment" id
     return nothing
 end
 
 """
-    duplicate_experiment(id::Int) -> Int
+    duplicate_experiment(id::Int; copy_files=false, link_to_original=true) -> Int
 
 Duplicate an experiment. Returns the new experiment ID.
+
+- `copy_files::Bool` — also copy the original's attached uploads (default `false`).
+- `link_to_original::Bool` — auto-create a link from the new experiment back to
+  the original (default `true`).
 
 # Example
 ```julia
 new_id = duplicate_experiment(42)
+with_attachments = duplicate_experiment(42; copy_files=true, link_to_original=false)
 ```
 """
-duplicate_experiment(id::Int) = _duplicate_entity("experiments", id)
+duplicate_experiment(id::Int; copy_files::Bool=false, link_to_original::Bool=true) =
+    _duplicate_entity("experiments", id;
+        copy_files=copy_files, link_to_original=link_to_original)
 
 """
     list_experiments(; limit, offset, order, sort,
@@ -460,7 +463,7 @@ update_step(42, 7; deadline="2026-05-01 12:00:00")
 """
 update_step(id::Int, step_id::Int;
     body::Union{String, Nothing}=nothing,
-    deadline::Union{String, Nothing}=nothing,
+    deadline::Union{AbstractString, DateTime, Nothing}=nothing,
     is_immutable::Union{Int, Nothing}=nothing,
 ) = _update_entity_step("experiments", id, step_id;
     body=body, deadline=deadline, is_immutable=is_immutable)
@@ -491,7 +494,7 @@ link_experiments(42, 37)  # Link experiment 42 → 37
 """
 function link_experiments(id1::Int, id2::Int)
     _link_entity("experiments", id1, "experiments", id2)
-    println("Linked experiment $id1 → $id2")
+    @info "Linked experiments" from=id1 to=id2
     return nothing
 end
 

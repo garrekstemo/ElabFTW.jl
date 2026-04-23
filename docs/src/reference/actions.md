@@ -16,6 +16,10 @@ lock_experiment
 lock_item
 pin_experiment
 pin_item
+force_lock_experiment
+force_unlock_experiment
+force_lock_item
+force_unlock_item
 ```
 
 ## Timestamp (RFC 3161)

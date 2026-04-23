@@ -91,4 +91,21 @@
         @test SIGN_MEANING[:review] == 40
         @test SIGN_MEANING[:safety] == 50
     end
+
+    @testset "force_lock / force_unlock wrappers" begin
+        # Mock's action dispatcher only knows lock/pin/timestamp/sign; the
+        # forcelock/forceunlock actions pass through as "unknown" and return
+        # HTTP 400 → ClientError. That's enough to assert the wrapper threads
+        # the right action string into the payload; the real server gates
+        # these on admin permission (PermissionError in practice).
+        id = create_experiment(title="force-lock-test")
+        @test_throws ClientError force_lock_experiment(id)
+        @test_throws ClientError force_unlock_experiment(id)
+        delete_experiment(id)
+
+        iid = create_item(title="force-lock-item-test")
+        @test_throws ClientError force_lock_item(iid)
+        @test_throws ClientError force_unlock_item(iid)
+        delete_item(iid)
+    end
 end

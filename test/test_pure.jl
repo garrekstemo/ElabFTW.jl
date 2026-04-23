@@ -79,9 +79,9 @@ end
     end
 
     @testset "Tag guards" begin
-        @test_throws NotConfiguredError list_tags(1)
+        @test_throws NotConfiguredError list_experiment_tags(1)
         @test_throws NotConfiguredError untag_experiment(1, 1)
-        @test_throws NotConfiguredError clear_tags(1)
+        @test_throws NotConfiguredError clear_experiment_tags(1)
         @test_throws NotConfiguredError list_team_tags()
         @test_throws NotConfiguredError rename_team_tag(1, "new")
         @test_throws NotConfiguredError delete_team_tag(1)

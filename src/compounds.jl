@@ -18,33 +18,38 @@ function list_compounds(; limit::Int=20, offset::Int=0)
 end
 
 """
-    create_compound(; name, cas_number, smiles, molecular_formula) -> Int
+    create_compound(; name, kwargs...) -> Int
 
-Create a new compound. Returns the compound ID.
+Create a new compound. Returns the compound ID. `name` is required; every
+other field from the eLabFTW compound schema is accepted as a keyword
+argument and forwarded verbatim.
 
-# Arguments
-- `name::String` — Compound name
-- `cas_number::String` — CAS registry number (optional)
-- `smiles::String` — SMILES notation (optional)
-- `molecular_formula::String` — Molecular formula (optional)
+Commonly used:
+
+- Identifiers — `cas_number`, `smiles`, `inchi`, `inchi_key`, `iupac_name`,
+  `molecular_formula`, `pubchem_cid::Int`
+- Hazard flags (`0` or `1`) — `is_corrosive`, `is_explosive`, `is_flammable`,
+  `is_gas_under_pressure`, `is_hazardous2env`, `is_hazardous2health`,
+  `is_oxidising`, `is_radioactive`, `is_serious_health_hazard`, `is_toxic`
+
+See [`update_compound`](@ref) for the full writable field set.
 
 # Example
 ```julia
 id = create_compound(name="NH4SCN", cas_number="1762-95-4")
+id = create_compound(name="Benzene", cas_number="71-43-2",
+                     is_flammable=1, is_toxic=1, is_hazardous2health=1)
 ```
+
+To pull metadata straight from PubChem, use [`import_compound`](@ref).
 """
-function create_compound(;
-    name::String,
-    cas_number::String="",
-    smiles::String="",
-    molecular_formula::String=""
-)
+function create_compound(; name::AbstractString, kwargs...)
     _check_enabled()
     url = "$(_elabftw_config.url)/api/v2/compounds"
-    payload = Dict{String, Any}("name" => name)
-    !isempty(cas_number) && (payload["cas_number"] = cas_number)
-    !isempty(smiles) && (payload["smiles"] = smiles)
-    !isempty(molecular_formula) && (payload["molecular_formula"] = molecular_formula)
+    payload = Dict{String, Any}("name" => String(name))
+    for (k, v) in kwargs
+        payload[String(k)] = v
+    end
     response = _elabftw_post(url, payload)
     return _parse_id_from_response(response)
 end

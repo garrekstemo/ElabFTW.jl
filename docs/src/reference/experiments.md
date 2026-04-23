@@ -20,9 +20,7 @@ search_experiments
 ```@docs
 tag_experiment
 untag_experiment
-list_tags
 list_experiment_tags
-clear_tags
 clear_experiment_tags
 ```
 

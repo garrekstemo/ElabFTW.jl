@@ -141,7 +141,7 @@ end
 
 function _update_entity_step(entity_type::String, id::Int, step_id::Int;
     body::Union{String, Nothing}=nothing,
-    deadline::Union{String, Nothing}=nothing,
+    deadline::Union{AbstractString, DateTime, Nothing}=nothing,
     is_immutable::Union{Int, Nothing}=nothing,
 )
     _check_enabled()
@@ -152,7 +152,7 @@ function _update_entity_step(entity_type::String, id::Int, step_id::Int;
     url = "$(_elabftw_config.url)/api/v2/$entity_type/$id/steps/$step_id"
     payload = Dict{String, Any}()
     isnothing(body) || (payload["body"] = body)
-    isnothing(deadline) || (payload["deadline"] = deadline)
+    isnothing(deadline) || (payload["deadline"] = _elab_datetime(deadline))
     isnothing(is_immutable) || (payload["is_immutable"] = is_immutable)
     _elabftw_patch(url, payload)
     return nothing

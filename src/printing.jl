@@ -29,7 +29,7 @@ function print_experiments(experiments::Vector; io::IO=stdout)
         raw_date = string(get(exp, "date", ""))
         date = length(raw_date) >= 10 ? raw_date[1:10] : raw_date
         raw_title = string(get(exp, "title", ""))
-        t = length(raw_title) > 50 ? raw_title[1:47] * "..." : raw_title
+        t = length(raw_title) > 50 ? first(raw_title, 47) * "..." : raw_title
         tags_list = get(exp, "tags", [])
         tag_strs = [string(get(tag, "tag", tag)) for tag in tags_list]
         tags_str = join(tag_strs, ", ")
@@ -66,7 +66,7 @@ function print_items(items::Vector; io::IO=stdout)
         cat = string(get(item, "category_title", get(item, "category", "")))
         cat = length(cat) > 14 ? cat[1:11] * "..." : cat
         raw_title = string(get(item, "title", ""))
-        t = length(raw_title) > 42 ? raw_title[1:39] * "..." : raw_title
+        t = length(raw_title) > 42 ? first(raw_title, 39) * "..." : raw_title
         tags_list = get(item, "tags", [])
         tag_strs = [string(get(tag, "tag", tag)) for tag in tags_list]
         tags_str = join(tag_strs, ", ")
@@ -81,7 +81,7 @@ Pretty-print tag lists from `list_tags` (entity tags) or `list_team_tags` (team 
 
 # Examples
 ```julia
-print_tags(list_tags(experiment_id))
+print_tags(list_experiment_tags(experiment_id))
 print_tags(list_team_tags())
 ```
 """
