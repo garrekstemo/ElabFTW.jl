@@ -38,6 +38,23 @@
             @test ElabFTW._http_error(503, "u", "oops") isa ServerError
         end
 
+        @testset "showerror formatting" begin
+            @test occursin("not enabled", sprint(showerror, NotConfiguredError()))
+            @test occursin("401", sprint(showerror, AuthError("u")))
+            @test occursin("403", sprint(showerror, PermissionError("u")))
+            @test occursin("404", sprint(showerror, NotFoundError("http://x/y")))
+            @test occursin("http://x/y", sprint(showerror, NotFoundError("http://x/y")))
+            msg = sprint(showerror, RateLimitError("u", 12))
+            @test occursin("429", msg)
+            @test occursin("Retry-After=12", msg)
+            # No Retry-After variant still works
+            @test occursin("429", sprint(showerror, RateLimitError("u", nothing)))
+            @test occursin("503", sprint(showerror, ServerError(503, "u", "body")))
+            @test occursin("422", sprint(showerror, ClientError(422, "u", "")))
+            @test occursin("network error", lowercase(sprint(showerror, NetworkError("DNS failed", nothing))))
+            @test occursin("parse error", lowercase(sprint(showerror, ParseError("bad JSON"))))
+        end
+
         @testset "Retry on 5xx succeeds after retries" begin
             id = create_experiment(title="retry-5xx-target")
 

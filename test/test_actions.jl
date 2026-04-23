@@ -58,6 +58,13 @@
         r2 = sign_experiment(id; passphrase="secret", meaning=:authorship)
         @test r2["meaning"] == 20
         delete_experiment(id)
+
+        # sign_item parallel path
+        iid = create_item(title="sign-item")
+        rv = sign_item(iid; passphrase="secret", meaning=:review)
+        @test rv["signed"] == 1
+        @test rv["meaning"] == 40
+        delete_item(iid)
     end
 
     @testset "Sign — missing passphrase surfaces ServerError" begin

@@ -206,7 +206,21 @@
         @test any(e -> e["id"] == b, res)
         @test !any(e -> e["id"] == a, res)
 
+        # Exercise the less-common filter kwargs so their URL-param branches
+        # are covered (mock doesn't necessarily act on them).
+        list_experiments(state=1, status=1, scope=2, owner=[1, 2])
+        search_experiments(query="filter", tags=["x"], extended="rating:1",
+                           related=a, related_origin=:items)
+
         delete_experiment(a)
         delete_experiment(b)
+    end
+
+    @testset "update_experiment with no fields is a no-op" begin
+        id = create_experiment(title="noop-update", body="keep me")
+        # _update_entity warns + returns when given no kwargs
+        update_experiment(id)
+        @test get_experiment(id)["body"] == "keep me"
+        delete_experiment(id)
     end
 end
