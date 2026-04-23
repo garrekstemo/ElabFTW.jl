@@ -1,12 +1,12 @@
 @testset "Batch operations" begin
     @testset "Input validation" begin
-        @test_throws ErrorException delete_experiments()
-        @test_throws ErrorException tag_experiments("tag")
-        @test_throws ErrorException update_experiments(new_body="test")
-        @test_throws ErrorException delete_items()
-        @test_throws ErrorException tag_items("tag")
-        @test_throws ErrorException update_items(new_body="test")
-        @test_throws ErrorException update_experiments(query="q")  # no body specified
+        @test_throws ArgumentError delete_experiments()
+        @test_throws ArgumentError tag_experiments("tag")
+        @test_throws ArgumentError update_experiments(new_body="test")
+        @test_throws ArgumentError delete_items()
+        @test_throws ArgumentError tag_items("tag")
+        @test_throws ArgumentError update_items(new_body="test")
+        @test_throws ArgumentError update_experiments(query="q")  # no body specified
     end
 
     @testset "delete_experiments dry_run" begin

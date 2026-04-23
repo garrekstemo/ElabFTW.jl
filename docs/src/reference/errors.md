@@ -34,6 +34,30 @@ NetworkError
 ParseError
 ```
 
+## When each error fires
+
+| Situation | Exception |
+|---|---|
+| `configure_elabftw` never called, or `disable_elabftw()` is active | `NotConfiguredError` |
+| API key missing / invalid | `AuthError` |
+| API key valid but action not permitted | `PermissionError` |
+| Entity doesn't exist or isn't visible | `NotFoundError` |
+| Rate limit exceeded (after retries exhausted) | `RateLimitError` (carries `retry_after`) |
+| Server 5xx (after retries exhausted) | `ServerError` |
+| Other 4xx (e.g. 422 validation error, 400 bad body) | `ClientError` |
+| Network / DNS / TLS / socket failure | `NetworkError` |
+| Malformed response body, unparseable `Location` | `ParseError` |
+| Bad argument (bad enum, missing required kwarg, wrong Symbol) | `ArgumentError` *(stdlib)* |
+
+Notable non-obvious cases:
+
+- **`sign_experiment` / `sign_item`** with missing or misconfigured signing keys — the server returns HTTP **500**, not 422. Surfaces as `ServerError` after retry exhaustion.
+- **`notif_step` / `notif_item_step`** on a step with no `deadline` — server returns HTTP **500**. Use [`update_step`](@ref) to set a deadline first.
+- **`delete_storage_unit`** on a unit with children or containers — `ClientError` (status 422). Empty children/containers first.
+- **`create_container`** internally fetches the listing after POST to find the new row ID (the server's `Location` header is unusable for this endpoint). If the listing has no matching row, raises `ParseError`.
+
+See per-function `# Throws` sections for argument-validation specifics.
+
 ## Retry behavior
 
 Requests that return HTTP 5xx or 429 are retried automatically with

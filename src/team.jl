@@ -169,6 +169,9 @@ Returns the new category ID.
 ```julia
 create_category(:experiments; title="Draft", color="999999")
 ```
+
+# Throws
+- `ArgumentError` — `entity_type` is not `:experiments` or `:items`.
 """
 create_category(entity_type::Symbol; title::String, color::String="",
                 default::Int=0) =
@@ -187,6 +190,9 @@ get_category(entity_type::Symbol, id::Int) =
 
 Update a category's title, color, and/or default flag. At least one
 field must be provided. Returns the updated category.
+
+# Throws
+- `ArgumentError` — no fields provided, or `entity_type` invalid.
 """
 update_category(entity_type::Symbol, id::Int;
                 title::Union{String, Nothing}=nothing,

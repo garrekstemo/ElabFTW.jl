@@ -357,6 +357,9 @@ At least one of the three must be provided.
 update_experiment_upload(42, 7; real_name="peak-fit.pdf")   # rename
 update_experiment_upload(42, 7; state=2)                     # archive
 ```
+
+# Throws
+- `ArgumentError` — no fields provided, or `state` outside `{1, 2, 3}`.
 """
 update_experiment_upload(id::Int, upload_id::Int;
     real_name::Union{String, Nothing}=nothing,
@@ -451,6 +454,9 @@ be provided. `deadline` is a datetime string (`"YYYY-MM-DD HH:MM:SS"`);
 update_step(42, 7; body="Baseline correct using the Rubberband algorithm")
 update_step(42, 7; deadline="2026-05-01 12:00:00")
 ```
+
+# Throws
+- `ArgumentError` — no fields provided, or `is_immutable` outside `{0, 1}`.
 """
 update_step(id::Int, step_id::Int;
     body::Union{String, Nothing}=nothing,
@@ -465,6 +471,10 @@ update_step(id::Int, step_id::Int;
 Toggle the deadline notification flag on a step. The step must have a
 `deadline` already set (use [`update_step`](@ref)) — the server returns
 HTTP 500 otherwise. Calling this twice cycles the flag off/on.
+
+# Throws
+- `ServerError` — the step has no `deadline`. Set one first with
+  [`update_step`](@ref).
 """
 notif_step(id::Int, step_id::Int) = _notif_entity_step("experiments", id, step_id)
 
