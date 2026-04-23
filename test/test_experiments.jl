@@ -206,20 +206,29 @@
         @test any(e -> e["id"] == b, res)
         @test !any(e -> e["id"] == a, res)
 
-        # Exercise the less-common filter kwargs so their URL-param branches
-        # are covered (mock doesn't necessarily act on them).
-        list_experiments(state=1, status=1, scope=2, owner=[1, 2])
-        search_experiments(query="filter", tags=["x"], extended="rating:1",
-                           related=a, related_origin=:items)
+        # state filter: mock entities default to state=1, so state=2 returns
+        # empty (serializing the param as an int round-trips through the URL
+        # builder and the mock's state branch).
+        @test !any(e -> e["id"] in (a, b), list_experiments(state=2))
+        # owner filter with a user id nobody owns
+        @test !any(e -> e["id"] in (a, b), list_experiments(owner=[99999]))
 
         delete_experiment(a)
         delete_experiment(b)
     end
 
-    @testset "update_experiment with no fields is a no-op" begin
+    @testset "update_experiment with no fields warns and does not hit HTTP" begin
         id = create_experiment(title="noop-update", body="keep me")
-        # _update_entity warns + returns when given no kwargs
-        update_experiment(id)
+        # _update_entity's contract: warn when called without any field, and
+        # skip the HTTP call entirely. We prove both by (a) asserting the
+        # warn fires, (b) queueing a 503 on the PATCH URL and confirming the
+        # call returns cleanly — if it had issued the PATCH, the retry layer
+        # would have exhausted and raised ServerError.
+        queue_failure!(mock.state, "/api/v2/experiments/$id", 503)
+        @test_logs (:warn,) update_experiment(id)
+        @test !isempty(mock.state.inject_failures)  # still queued → no request made
+        empty!(mock.state.inject_failures)
+
         @test get_experiment(id)["body"] == "keep me"
         delete_experiment(id)
     end

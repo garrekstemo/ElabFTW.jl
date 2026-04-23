@@ -67,6 +67,16 @@ end
         @test exp["body"] == "v2"
         @test any(t -> t["tag"] == "upd-tag", list_tags(id))
 
+        # Replace semantics: the old attach.txt was deleted, the new one
+        # was uploaded — there must be exactly one active attachment with
+        # that filename, not two. (A bug that appended instead of replaced
+        # would leave two uploads here.)
+        uploads = list_experiment_uploads(id)
+        active_attach = filter(uploads) do u
+            get(u, "real_name", "") == "attach.txt" && get(u, "state", 1) == 1
+        end
+        @test length(active_attach) == 1
+
         delete_experiment(id)
     finally
         Base.PROGRAM_FILE = saved_prog
