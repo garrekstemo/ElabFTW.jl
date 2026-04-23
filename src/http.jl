@@ -8,6 +8,12 @@ function _check_enabled()
     elabftw_enabled() || throw(NotConfiguredError())
 end
 
+# Canonical datetime format the eLabFTW API accepts on booking events, step
+# deadlines, etc. Accept either a pre-formatted string or a `DateTime` and
+# return the wire format.
+_elab_datetime(s::AbstractString) = String(s)
+_elab_datetime(dt::DateTime) = Dates.format(dt, dateformat"yyyy-mm-dd HH:MM:SS")
+
 function _parse_id_from_response(response)::Int
     location = HTTP.header(response, "Location", "")
     if isempty(location)

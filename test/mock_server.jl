@@ -283,6 +283,10 @@ function create_entity!(state::MockState, collection::String, data::Dict)
         "timestamped" => 0,
     )
     for key in ("start", "end", "name", "cas_number", "smiles", "molecular_formula",
+                "inchi", "inchi_key", "iupac_name", "pubchem_cid",
+                "is_corrosive", "is_explosive", "is_flammable", "is_gas_under_pressure",
+                "is_hazardous2env", "is_hazardous2health", "is_oxidising",
+                "is_radioactive", "is_serious_health_hazard", "is_toxic",
                 "content_type", "item", "state", "userid")
         haskey(data, key) && (entity[key] = data[key])
     end

@@ -24,6 +24,25 @@
         delete_compound(id)
     end
 
+    @testset "Compound with rich fields (hazard flags, inchi, etc.)" begin
+        id = create_compound(
+            name="Benzene",
+            cas_number="71-43-2",
+            inchi="InChI=1S/C6H6/c1-2-4-6-5-3-1/h1-6H",
+            iupac_name="benzene",
+            pubchem_cid=241,
+            is_flammable=1,
+            is_toxic=1,
+        )
+        compound = get_compound(id)
+        @test compound["inchi"] == "InChI=1S/C6H6/c1-2-4-6-5-3-1/h1-6H"
+        @test compound["iupac_name"] == "benzene"
+        @test compound["pubchem_cid"] == 241
+        @test compound["is_flammable"] == 1
+        @test compound["is_toxic"] == 1
+        delete_compound(id)
+    end
+
     @testset "Compound linking" begin
         exp_id = create_experiment(title="Compound link test")
         comp_id = create_compound(name="Test compound")

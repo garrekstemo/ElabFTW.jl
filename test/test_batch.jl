@@ -37,13 +37,13 @@
         ids = tag_experiments("batch-added"; query="batch-tag")
         @test id in ids
 
-        tags = list_tags(id)
+        tags = list_experiment_tags(id)
         @test any(t -> t["tag"] == "batch-added", tags)
 
         # Vector form: add multiple tags to every match
         ids2 = tag_experiments(["multi-a", "multi-b"]; query="batch-tag")
         @test id in ids2
-        tags = list_tags(id)
+        tags = list_experiment_tags(id)
         @test any(t -> t["tag"] == "multi-a", tags)
         @test any(t -> t["tag"] == "multi-b", tags)
 

@@ -109,7 +109,7 @@ export download_elabftw_file, download_item_upload, download_experiment_upload
 # Experiments
 export create_experiment, create_from_template
 export update_experiment, upload_to_experiment
-export tag_experiment, untag_experiment, list_tags, clear_tags
+export tag_experiment, untag_experiment
 export list_experiment_tags, clear_experiment_tags
 export get_experiment, delete_experiment, duplicate_experiment
 export list_experiments, search_experiments
@@ -131,6 +131,8 @@ export update_item_step, notif_item_step
 # Actions (PatchAction on experiments/items)
 export lock_experiment, pin_experiment, timestamp_experiment, sign_experiment
 export lock_item, pin_item, timestamp_item, sign_item
+export force_lock_experiment, force_unlock_experiment
+export force_lock_item, force_unlock_item
 export SIGN_MEANING
 
 # Cross-entity links

@@ -1,6 +1,6 @@
 using Test
 using ElabFTW
-import HTTP, JSON, Sockets
+import HTTP, JSON, Sockets, Dates
 using Aqua
 
 include("mock_server.jl")
@@ -8,6 +8,7 @@ include("mock_server.jl")
 @testset "ElabFTW.jl" begin
 
     @testset "Code quality (Aqua.jl)" begin
+        # Dates is a stdlib; General doesn't require stdlib compat but Aqua does.
         Aqua.test_all(ElabFTW; deps_compat=(check_extras=false, ignore=[:Dates],))
     end
     # Pure tests (no HTTP server needed)

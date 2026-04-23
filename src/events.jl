@@ -39,15 +39,15 @@ id = create_event(item=7, title="FTIR session", start="2026-03-01 09:00:00", end
 function create_event(;
     item::Int,
     title::String,
-    start::String,
-    end_::String
+    start::Union{AbstractString, DateTime},
+    end_::Union{AbstractString, DateTime},
 )
     _check_enabled()
     url = "$(_elabftw_config.url)/api/v2/events/$item"
     payload = Dict{String, Any}(
         "title" => title,
-        "start" => start,
-        "end" => end_
+        "start" => _elab_datetime(start),
+        "end" => _elab_datetime(end_),
     )
     response = _elabftw_post(url, payload)
     return _parse_id_from_response(response)
@@ -90,8 +90,8 @@ update_event(42; experiment=17)
 """
 function update_event(id::Int;
     title::Union{String, Nothing}=nothing,
-    start::Union{String, Nothing}=nothing,
-    end_::Union{String, Nothing}=nothing,
+    start::Union{AbstractString, DateTime, Nothing}=nothing,
+    end_::Union{AbstractString, DateTime, Nothing}=nothing,
     experiment::Union{Int, Nothing}=nothing,
     item_link::Union{Int, Nothing}=nothing,
 )
@@ -105,7 +105,9 @@ function update_event(id::Int;
     end
     if !isnothing(start)
         _elabftw_patch(url, Dict{String, Any}(
-            "target" => "datetime", "start" => start, "end" => end_))
+            "target" => "datetime",
+            "start" => _elab_datetime(start),
+            "end" => _elab_datetime(end_)))
     end
     if !isnothing(experiment)
         _elabftw_patch(url, Dict{String, Any}("target" => "experiment", "id" => experiment))

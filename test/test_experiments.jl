@@ -38,7 +38,7 @@
         exp = get_experiment(exp_id)
         @test exp["title"] == "From template"
 
-        tags = list_tags(exp_id)
+        tags = list_experiment_tags(exp_id)
         @test any(t -> t["tag"] == "tmpl-tag", tags)
 
         delete_experiment(exp_id)
@@ -49,21 +49,21 @@
         id = create_experiment(title="Tag test")
 
         tag_experiment(id, "single-tag")
-        tags = list_tags(id)
+        tags = list_experiment_tags(id)
         @test length(tags) == 1
         @test tags[1]["tag"] == "single-tag"
 
         tag_experiment(id, ["batch-a", "batch-b"])
-        tags = list_tags(id)
+        tags = list_experiment_tags(id)
         @test length(tags) == 3
 
         tag_id = tags[1]["tag_id"]
         untag_experiment(id, tag_id)
-        tags = list_tags(id)
+        tags = list_experiment_tags(id)
         @test length(tags) == 2
 
-        clear_tags(id)
-        tags = list_tags(id)
+        clear_experiment_tags(id)
+        tags = list_experiment_tags(id)
         @test isempty(tags)
 
         delete_experiment(id)
@@ -231,5 +231,40 @@
 
         @test get_experiment(id)["body"] == "keep me"
         delete_experiment(id)
+    end
+
+    @testset "update_experiment forwards extra kwargs" begin
+        id = create_experiment(title="kwargs-exp", body="b")
+        update_experiment(id; rating=4, custom_id="FTIR-042", date="2026-04-23")
+        exp = get_experiment(id)
+        @test exp["rating"] == 4
+        @test exp["custom_id"] == "FTIR-042"
+        @test exp["date"] == "2026-04-23"
+        delete_experiment(id)
+    end
+
+    @testset "DateTime on create_event / update_event / update_step" begin
+        item_id = create_item(title="dt-event-item")
+        id = create_event(item=item_id, title="dt booking",
+            start=Dates.DateTime(2026, 3, 1, 9, 0, 0),
+            end_=Dates.DateTime(2026, 3, 1, 12, 0, 0))
+        evt = get_event(id)
+        @test evt["start"] == "2026-03-01 09:00:00"
+        @test evt["end"] == "2026-03-01 12:00:00"
+
+        update_event(id; start=Dates.DateTime(2026, 3, 2, 10, 0, 0),
+                         end_=Dates.DateTime(2026, 3, 2, 11, 0, 0))
+        evt = get_event(id)
+        @test evt["start"] == "2026-03-02 10:00:00"
+
+        exp_id = create_experiment(title="dt-step")
+        s = add_step(exp_id, "with deadline")
+        update_step(exp_id, s; deadline=Dates.DateTime(2026, 5, 1, 12, 0, 0))
+        step = first(filter(x -> x["id"] == s, list_steps(exp_id)))
+        @test step["deadline"] == "2026-05-01 12:00:00"
+
+        delete_experiment(exp_id)
+        delete_event(id)
+        delete_item(item_id)
     end
 end

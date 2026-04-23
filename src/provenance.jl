@@ -86,16 +86,17 @@ function log_to_elab(;
     existing = _read_elab_id()
 
     if !isnothing(existing) && existing.title == title
-        # Update existing experiment
+        # Update existing experiment — propagate the same fields a fresh
+        # create would. Re-runs must be idempotent: if the caller trims
+        # `tags`, the experiment's tag set must shrink accordingly rather
+        # than accumulate previous runs' labels.
         id = existing.id
-        update_experiment(id; title=title, body=body)
+        update_experiment(id; title=title, body=body, metadata=metadata)
         _replace_attachments(id, attachments)
-        if !isempty(tags)
-            tag_experiment(id, tags)
-        end
+        clear_experiment_tags(id)
+        isempty(tags) || tag_experiment(id, tags)
         exp_url = "$(_elabftw_config.url)/experiments.php?mode=view&id=$id"
-        println("eLabFTW: updated experiment #$id")
-        println("  $exp_url")
+        @info "eLabFTW: updated experiment" id url=exp_url
     else
         # Create new experiment
         id = create_experiment(; title=title, body=body, category=category, metadata=metadata)
@@ -107,8 +108,7 @@ function log_to_elab(;
         end
         _write_elab_id(id, title)
         exp_url = "$(_elabftw_config.url)/experiments.php?mode=view&id=$id"
-        println("eLabFTW: created experiment #$id")
-        println("  $exp_url")
+        @info "eLabFTW: created experiment" id url=exp_url
     end
 
     return id

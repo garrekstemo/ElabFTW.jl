@@ -37,7 +37,7 @@ end
 
     exp = get_experiment(id)
     @test exp["title"] == "Mock log test"
-    tags = list_tags(id)
+    tags = list_experiment_tags(id)
     @test any(t -> t["tag"] == "mock-tag", tags)
 end
 
@@ -54,10 +54,16 @@ end
         tmpfile = joinpath(tmpdir, "attach.txt")
         write(tmpfile, "v1")
 
-        id = log_to_elab(title="Idempotent log", body="v1", attachments=[tmpfile])
+        # First run seeds two tags.
+        id = log_to_elab(title="Idempotent log", body="v1",
+                         attachments=[tmpfile], tags=["stale-a", "stale-b"])
         @test isfile(joinpath(tmpdir, ".elab_id"))
+        @test length(list_experiment_tags(id)) == 2
 
-        # Re-run with same title hits the update branch + attachment replace
+        # Re-run with same title hits the update branch + attachment replace.
+        # New tags are a different set — the old ones must disappear, not
+        # accumulate. The bug this guards against: update branch appending
+        # tags instead of replacing them.
         write(tmpfile, "v2")
         id2 = log_to_elab(title="Idempotent log", body="v2",
                           attachments=[tmpfile], tags=["upd-tag"])
@@ -65,7 +71,14 @@ end
 
         exp = get_experiment(id)
         @test exp["body"] == "v2"
-        @test any(t -> t["tag"] == "upd-tag", list_tags(id))
+        tag_names = [t["tag"] for t in list_experiment_tags(id)]
+        @test tag_names == ["upd-tag"]  # stale-a / stale-b gone
+        @test !("stale-a" in tag_names)
+        @test !("stale-b" in tag_names)
+
+        # Re-run with no tags should leave the experiment with zero tags.
+        log_to_elab(title="Idempotent log", body="v3")
+        @test isempty(list_experiment_tags(id))
 
         # Replace semantics: the old attach.txt was deleted, the new one
         # was uploaded — there must be exactly one active attachment with
