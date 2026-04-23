@@ -24,6 +24,10 @@ delete_experiments(tags=["test"]; dry_run=false)
 # Delete by search query
 delete_experiments(query="QPS.jl test"; dry_run=false)
 ```
+
+# Throws
+- `ArgumentError` — neither `query` nor `tags` provided. Every batch helper
+  here rejects unfiltered calls to prevent operator error.
 """
 function delete_experiments(;
     query::Union{String, Nothing} = nothing,
@@ -32,7 +36,7 @@ function delete_experiments(;
 )
     _check_enabled()
     if isnothing(query) && isempty(tags)
-        error("Must specify at least one of: query, tags")
+        throw(ArgumentError("Must specify at least one of: query, tags"))
     end
 
     all_matches = _find_all_entities("experiments"; query=query, tags=tags)
@@ -86,7 +90,7 @@ function tag_experiments(tag::String;
 )
     _check_enabled()
     if isnothing(query) && isempty(tags)
-        error("Must specify at least one of: query, tags")
+        throw(ArgumentError("Must specify at least one of: query, tags"))
     end
 
     all_matches = _find_all_entities("experiments"; query=query, tags=tags)
@@ -128,7 +132,7 @@ function tag_experiments(new_tags::Vector{String};
 )
     _check_enabled()
     if isnothing(query) && isempty(tags)
-        error("Must specify at least one of: query, tags")
+        throw(ArgumentError("Must specify at least one of: query, tags"))
     end
     isempty(new_tags) && return Int[]
     all_matches = _find_all_entities("experiments"; query=query, tags=tags)
@@ -170,10 +174,10 @@ function update_experiments(;
 )
     _check_enabled()
     if isnothing(query) && isempty(tags)
-        error("Must specify at least one of: query, tags")
+        throw(ArgumentError("Must specify at least one of: query, tags"))
     end
     if isnothing(new_body) && isnothing(append_body)
-        error("Must specify at least one of: new_body, append_body")
+        throw(ArgumentError("Must specify at least one of: new_body, append_body"))
     end
 
     all_matches = _find_all_entities("experiments"; query=query, tags=tags)
@@ -220,7 +224,7 @@ function delete_items(;
 )
     _check_enabled()
     if isnothing(query) && isempty(tags)
-        error("Must specify at least one of: query, tags")
+        throw(ArgumentError("Must specify at least one of: query, tags"))
     end
 
     all_matches = _find_all_entities("items"; query=query, tags=tags)
@@ -265,7 +269,7 @@ function tag_items(tag::String;
 )
     _check_enabled()
     if isnothing(query) && isempty(tags)
-        error("Must specify at least one of: query, tags")
+        throw(ArgumentError("Must specify at least one of: query, tags"))
     end
 
     all_matches = _find_all_entities("items"; query=query, tags=tags)
@@ -298,7 +302,7 @@ function tag_items(new_tags::Vector{String};
 )
     _check_enabled()
     if isnothing(query) && isempty(tags)
-        error("Must specify at least one of: query, tags")
+        throw(ArgumentError("Must specify at least one of: query, tags"))
     end
     isempty(new_tags) && return Int[]
     all_matches = _find_all_entities("items"; query=query, tags=tags)
@@ -334,10 +338,10 @@ function update_items(;
 )
     _check_enabled()
     if isnothing(query) && isempty(tags)
-        error("Must specify at least one of: query, tags")
+        throw(ArgumentError("Must specify at least one of: query, tags"))
     end
     if isnothing(new_body) && isnothing(append_body)
-        error("Must specify at least one of: new_body, append_body")
+        throw(ArgumentError("Must specify at least one of: new_body, append_body"))
     end
 
     all_matches = _find_all_entities("items"; query=query, tags=tags)

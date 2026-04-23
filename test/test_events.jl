@@ -29,7 +29,7 @@
     update_event(id; item_link=item_id)
     @test get_event(id)["item_link"] == item_id
 
-    @test_throws ErrorException update_event(id; start="2026-03-01 10:00:00")
+    @test_throws ArgumentError update_event(id; start="2026-03-01 10:00:00")
 
     delete_event(id)
     @test_throws NotFoundError get_event(id)

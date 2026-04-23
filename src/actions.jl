@@ -140,6 +140,12 @@ are not configured, the server returns HTTP 500 (this surfaces as a
 ```julia
 sign_experiment(42; passphrase="secret", meaning=:approval)
 ```
+
+# Throws
+- `ArgumentError` — `meaning` is not in `SIGN_MEANING` (bad `Int` or unknown `Symbol`).
+- `ServerError` — signing keys not configured or passphrase wrong. The server
+  returns HTTP 500 rather than 4xx for these; after retry exhaustion this
+  surfaces as [`ServerError`](@ref).
 """
 function sign_experiment(id::Int;
     passphrase::AbstractString,

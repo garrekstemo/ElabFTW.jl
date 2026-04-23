@@ -38,4 +38,4 @@ _None open._
 
 ## Docs & infra
 
-- [ ] Docstrings: add "Throws" sections to exported functions (audit + backfill)
+_All items shipped. See the "When each error fires" table in `docs/src/reference/errors.md` for the consolidated throws reference._

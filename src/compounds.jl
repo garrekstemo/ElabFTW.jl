@@ -113,6 +113,9 @@ server silently prefers `cid`.
 caffeine = import_compound(cas="58-08-2")
 aspirin  = import_compound(cid=2244)
 ```
+
+# Throws
+- `ArgumentError` — neither or both of `cas` / `cid` were provided.
 """
 function import_compound(;
     cas::Union{AbstractString, Nothing}=nothing,

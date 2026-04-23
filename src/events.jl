@@ -84,6 +84,9 @@ update_event(42; title="Rescheduled session")
 update_event(42; start="2026-03-02 09:00:00", end_="2026-03-02 11:00:00")
 update_event(42; experiment=17)
 ```
+
+# Throws
+- `ArgumentError` — only one of `start` / `end_` was provided (they must be paired).
 """
 function update_event(id::Int;
     title::Union{String, Nothing}=nothing,
@@ -94,7 +97,7 @@ function update_event(id::Int;
 )
     _check_enabled()
     if isnothing(start) != isnothing(end_)
-        error("update_event: start and end_ must be provided together")
+        throw(ArgumentError("update_event: start and end_ must be provided together"))
     end
     url = "$(_elabftw_config.url)/api/v2/event/$id"
     if !isnothing(title)

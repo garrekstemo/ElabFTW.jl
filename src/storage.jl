@@ -88,8 +88,11 @@ end
 """
     delete_storage_unit(id::Int)
 
-Delete a storage unit. Fails with HTTP 422 if the unit has child units or
-attached containers — empty those first.
+Delete a storage unit. Fails if the unit has child units or attached
+containers — empty those first.
+
+# Throws
+- `ClientError` (status 422) — the unit still has children or containers.
 """
 function delete_storage_unit(id::Int)
     _check_enabled()
@@ -168,6 +171,10 @@ entity's containers and returns the newest row with the matching
 ```julia
 cid = create_container(:items, 42; storage_id=7, qty_stored=50, qty_unit="mL")
 ```
+
+# Throws
+- `ParseError` — the POST succeeded but the follow-up listing has no row
+  matching `storage_id`. Indicates server behavior has drifted; open an issue.
 """
 function create_container(
     entity_type::Symbol,
