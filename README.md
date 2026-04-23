@@ -64,3 +64,7 @@ log_to_elab(
 ```
 
 `log_to_elab` creates a `.elab_id` file in the directory to track the experiment ID. Subsequent calls update the existing experiment instead of creating duplicates.
+
+## See Also
+
+- [**elabapi-python**](https://github.com/elabftw/elabapi-python) — the official Python client from the eLabFTW team. The reference implementation for the v2 API; this Julia client's surface was derived from the same [OpenAPI spec](https://github.com/elabftw/elabftw/blob/master/apidoc/v2/openapi.yaml).
