@@ -30,28 +30,35 @@
     @testset "download_*_upload caches bytes" begin
         item_id = create_item(title="cache-dl-probe")
         tmpfile = tempname() * ".txt"
-        write(tmpfile, "payload")
+        write(tmpfile, "payload-bytes-xyz")
         upload_id = upload_to_item(item_id, tmpfile; comment="probe")
 
-        # First call downloads + caches; second hits the cache directly.
+        # First call downloads. The mock serves the bytes we uploaded — so
+        # the cached file must equal what we wrote.
         path1 = download_item_upload(item_id, upload_id; filename="probe.txt")
-        @test isfile(path1)
-        mtime1 = mtime(path1)
+        @test read(path1, String) == "payload-bytes-xyz"
+
+        # Cache hit: if the function skips the HTTP round-trip, a queued 503
+        # on the upload URL shouldn't be consumed. After the second call the
+        # failure should still be queued.
+        queue_failure!(mock.state, "/api/v2/items/$item_id/uploads/$upload_id", 503)
         path2 = download_item_upload(item_id, upload_id; filename="probe.txt")
         @test path1 == path2
-        @test mtime(path2) == mtime1  # cache hit didn't rewrite
+        @test !isempty(mock.state.inject_failures)
+        empty!(mock.state.inject_failures)
 
         # Legacy alias
         path3 = download_elabftw_file(item_id, upload_id; filename="probe.txt")
         @test path3 == path1
 
-        # Experiments branch
+        # Experiments branch serves its own bytes
         exp_id = create_experiment(title="cache-exp-probe")
+        write(tmpfile, "experiment-payload")
         e_upload = upload_to_experiment(exp_id, tmpfile)
         p_exp = download_experiment_upload(exp_id, e_upload; filename="exp.txt")
-        @test isfile(p_exp)
+        @test read(p_exp, String) == "experiment-payload"
 
-        # Cache info shows non-zero now
+        # Cache info reflects actual cached files
         info = elabftw_cache_info()
         @test info.files >= 2
         @test info.size_mb >= 0
@@ -59,6 +66,8 @@
         clear_elabftw_cache()
         info = elabftw_cache_info()
         @test info.files == 0
+        # Cleared directory was recreated
+        @test isdir(ElabFTW._elabftw_config.cache_dir)
 
         rm(tmpfile; force=true)
         delete_experiment(exp_id)
@@ -69,12 +78,19 @@
         id = create_experiment(title="export-probe")
         bytes = create_export(:experiments, id)
         @test bytes isa AbstractVector{UInt8}
-        @test !isempty(bytes)
+        # Mock serves literal "mock export data". If the function ever mangled
+        # the body (e.g. decoded as JSON, stringified the response object),
+        # this byte-identity check would catch it.
+        # NOTE: `String(bytes)` takes ownership and empties the Vector{UInt8}
+        # in Julia — read the expected bytes from a snapshot so subsequent
+        # assertions still see content.
+        expected = copy(bytes)
+        @test String(bytes) == "mock export data"
 
         tmp = tempname()
         returned = download_export(:experiments, id, tmp)
         @test returned == tmp
-        @test isfile(tmp)
+        @test read(tmp) == expected
         rm(tmp; force=true)
 
         delete_experiment(id)

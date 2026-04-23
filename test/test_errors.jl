@@ -49,10 +49,14 @@
             @test occursin("Retry-After=12", msg)
             # No Retry-After variant still works
             @test occursin("429", sprint(showerror, RateLimitError("u", nothing)))
-            @test occursin("503", sprint(showerror, ServerError(503, "u", "body")))
+            @test occursin("503", sprint(showerror, ServerError(503, "u", "body body")))
+            # ServerError body is surfaced for debugging context
+            @test occursin("body body", sprint(showerror, ServerError(503, "u", "body body")))
             @test occursin("422", sprint(showerror, ClientError(422, "u", "")))
-            @test occursin("network error", lowercase(sprint(showerror, NetworkError("DNS failed", nothing))))
-            @test occursin("parse error", lowercase(sprint(showerror, ParseError("bad JSON"))))
+            # NetworkError/ParseError show the message field (load-bearing —
+            # users need the original cause, not just the type label).
+            @test occursin("DNS failed", sprint(showerror, NetworkError("DNS failed", nothing)))
+            @test occursin("bad JSON", sprint(showerror, ParseError("bad JSON")))
         end
 
         @testset "Retry on 5xx succeeds after retries" begin

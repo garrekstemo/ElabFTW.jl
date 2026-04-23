@@ -140,6 +140,75 @@ function parse_json_body(req::HTTP.Request)
     end
 end
 
+# Parse the multipart body of an upload request to pull the file part out.
+# Returns (real_name, bytes). Good enough for tests — not a full parser.
+function extract_uploaded_file(req::HTTP.Request)
+    body = copy(req.body)
+    ct = HTTP.header(req, "Content-Type", "")
+    m = match(r"boundary=(.+?)(?:$|;)", ct)
+    isnothing(m) && return ("test_file.txt", UInt8[])
+    boundary = Vector{UInt8}("--" * String(m.captures[1]))
+    # Split the raw bytes on the boundary.
+    parts = split_bytes(body, boundary)
+    for part in parts
+        header_end = findfirst(==(Vector{UInt8}("\r\n\r\n")), [part[i:min(i+3,end)] for i in 1:length(part)-3])
+        # Simpler: find "\r\n\r\n" via a manual scan
+        idx = _find_double_crlf(part)
+        idx === nothing && continue
+        headers_bytes = part[1:idx-1]
+        headers = String(headers_bytes)
+        occursin("name=\"file\"", headers) || continue
+        fname_m = match(r"filename=\"([^\"]*)\"", headers)
+        filename = isnothing(fname_m) ? "test_file.txt" : String(fname_m.captures[1])
+        # Payload runs from after the header separator to the trailing CRLF
+        # that precedes the next boundary marker.
+        payload = part[idx+4:end]
+        # Trim trailing \r\n that separates payload from next boundary.
+        length(payload) >= 2 && payload[end-1:end] == UInt8[0x0d, 0x0a] &&
+            (payload = payload[1:end-2])
+        return (filename, Vector{UInt8}(payload))
+    end
+    return ("test_file.txt", UInt8[])
+end
+
+function _find_double_crlf(bs::AbstractVector{UInt8})
+    for i in 1:length(bs)-3
+        bs[i] == 0x0d && bs[i+1] == 0x0a && bs[i+2] == 0x0d && bs[i+3] == 0x0a && return i
+    end
+    return nothing
+end
+
+function split_bytes(bs::AbstractVector{UInt8}, sep::AbstractVector{UInt8})
+    parts = Vector{UInt8}[]
+    i = 1
+    while i <= length(bs) - length(sep) + 1
+        if view(bs, i:i+length(sep)-1) == sep
+            # Skip sep, plus trailing CRLF if present
+            next = i + length(sep)
+            if next <= length(bs) - 1 && bs[next] == 0x0d && bs[next+1] == 0x0a
+                next += 2
+            end
+            start = next
+            j = next
+            while j <= length(bs) - length(sep) + 1
+                if view(bs, j:j+length(sep)-1) == sep
+                    # End boundary preceded by "\r\n"
+                    stop = j - 1
+                    stop >= 2 && bs[stop-1] == 0x0d && bs[stop] == 0x0a && (stop -= 2)
+                    push!(parts, bs[start:stop])
+                    i = j
+                    @goto outer_continue
+                end
+                j += 1
+            end
+            break
+        end
+        i += 1
+        @label outer_continue
+    end
+    return parts
+end
+
 function handle_compound_duplicate!(state::MockState, data::Dict)
     # cid takes precedence when both are provided — matches real server.
     cid = haskey(data, "cid") ? Int(data["cid"]) : nothing
@@ -763,11 +832,13 @@ function route_subresource(state::MockState, method::String, entity::Dict, colle
             end
             if method == "POST"
                 upload_id = new_id!(state)
+                filename, payload = extract_uploaded_file(req)
                 push!(uploads, Dict{String, Any}(
                     "id" => upload_id,
-                    "real_name" => "test_file.txt",
+                    "real_name" => filename,
                     "comment" => "",
                     "state" => 1,
+                    "_bytes" => payload,
                 ))
                 return created_response("/api/v2/$collection/$entity_id/uploads/$upload_id")
             end
@@ -775,8 +846,19 @@ function route_subresource(state::MockState, method::String, entity::Dict, colle
             upload_id = tryparse(Int, rest[1])
             isnothing(upload_id) && return not_found()
             if method == "GET"
+                accept = HTTP.header(req, "Accept", "application/json")
                 for upload in uploads
-                    upload["id"] == upload_id && return json_response(upload)
+                    upload["id"] == upload_id || continue
+                    # Binary Accept → serve the uploaded bytes, matching the
+                    # real server's `?format=binary` semantics (cache.jl uses
+                    # Accept for this, not the query param).
+                    if occursin("application/octet-stream", accept)
+                        resp = HTTP.Response(200, get(upload, "_bytes", UInt8[]))
+                        push!(resp.headers, "Content-Type" => "application/octet-stream")
+                        return resp
+                    end
+                    # JSON view: hide the internal _bytes field
+                    return json_response(Dict(k => v for (k, v) in upload if k != "_bytes"))
                 end
                 return not_found()
             elseif method == "PATCH"
@@ -797,11 +879,13 @@ function route_subresource(state::MockState, method::String, entity::Dict, colle
                 isnothing(existing_idx) && return not_found()
                 uploads[existing_idx]["state"] = 2
                 new_id = new_id!(state)
+                filename, payload = extract_uploaded_file(req)
                 push!(uploads, Dict{String, Any}(
                     "id" => new_id,
-                    "real_name" => "replaced_file.txt",
+                    "real_name" => filename,
                     "comment" => "",
                     "state" => 1,
+                    "_bytes" => payload,
                 ))
                 return created_response("/api/v2/$collection/$entity_id/uploads/$new_id")
             elseif method == "DELETE"
