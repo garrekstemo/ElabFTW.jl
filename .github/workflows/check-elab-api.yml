@@ -1,0 +1,100 @@
+name: Check eLabFTW API
+
+# Monthly check for upstream eLabFTW API v2 OpenAPI spec changes.
+# On a change vs the committed snapshot (upstream/openapi.yaml), files one issue
+# labelled `upstream-api` with the diff and a client-update checklist.
+# See upstream/README.md for the full design.
+
+on:
+  schedule:
+    - cron: '0 7 1 * *'   # 07:00 UTC on the 1st of each month
+  workflow_dispatch:        # manual run; a no-op when nothing changed
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: check-elab-api
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Resolve latest eLabFTW release
+        id: rel
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag=$(gh api repos/elabftw/elabftw/releases/latest --jq .tag_name)
+          echo "Latest eLabFTW release: $tag"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+      - name: Fetch upstream OpenAPI spec
+        env:
+          TAG: ${{ steps.rel.outputs.tag }}
+        run: |
+          url="https://raw.githubusercontent.com/elabftw/elabftw/refs/tags/${TAG}/apidoc/v2/openapi.yaml"
+          curl -fsSL "$url" -o upstream/openapi.fetched.yaml
+          echo "Fetched $url"
+
+      - name: Compare against snapshot
+        id: diff
+        run: |
+          if diff -u upstream/openapi.yaml upstream/openapi.fetched.yaml > spec.diff; then
+            echo "Spec unchanged."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Spec changed."
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Open issue if changed
+        if: steps.diff.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.rel.outputs.tag }}
+        run: |
+          set -euo pipefail
+          existing=$(gh issue list --label upstream-api --state open --json number --jq 'length')
+          if [ "$existing" != "0" ]; then
+            echo "An open 'upstream-api' issue already exists; not filing a duplicate."
+            exit 0
+          fi
+          base_tag=$(cat upstream/.spec-version 2>/dev/null || echo unknown)
+          {
+            echo "The upstream **eLabFTW API v2** OpenAPI spec changed."
+            echo
+            echo "| | |"
+            echo "|--|--|"
+            echo "| Snapshot in repo | \`${base_tag}\` |"
+            echo "| Latest release | \`${TAG}\` |"
+            echo
+            echo "Source: <https://github.com/elabftw/elabftw/blob/${TAG}/apidoc/v2/openapi.yaml>"
+            echo
+            echo "### What to do"
+            echo "Update the Julia client to match, **in a single PR**:"
+            echo
+            echo "- [ ] Review the spec diff below (added / removed / changed endpoints & schemas)"
+            echo "- [ ] Update affected functions in \`src/\`"
+            echo "- [ ] Add or adjust tests in \`test/\`"
+            echo "- [ ] Update docs if endpoints changed"
+            echo "- [ ] Bump the snapshot: replace \`upstream/openapi.yaml\` with the \`${TAG}\` spec and set \`upstream/.spec-version\` to \`${TAG}\`"
+            echo
+            echo "> The snapshot bump is what stops this check from re-firing — do it in the same PR."
+            echo
+            echo "<details><summary>Unified diff of <code>apidoc/v2/openapi.yaml</code> (truncated to 60 KB)</summary>"
+            echo
+            echo '```diff'
+            head -c 60000 spec.diff
+            echo
+            echo '```'
+            echo "</details>"
+          } > issue-body.md
+          gh issue create \
+            --title "eLabFTW API spec changed (${base_tag} → ${TAG})" \
+            --label upstream-api \
+            --body-file issue-body.md
