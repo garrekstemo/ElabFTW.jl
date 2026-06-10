@@ -66,13 +66,27 @@ instead of creating a new one.
 
 Returns the experiment ID.
 
+# Idempotency mechanism
+
+The first run creates the experiment and writes a `.elab_id` marker file in
+the directory of the running script (`Base.PROGRAM_FILE`). Re-runs with the
+same `title` find the marker and update that experiment: body and metadata
+are replaced, tags are reset to the ones passed, and attachments with
+matching filenames are replaced.
+
+!!! warning
+    In the REPL or a notebook `Base.PROGRAM_FILE` is empty, so no `.elab_id`
+    marker can be written and every call creates a new experiment. Run your
+    analysis as a script (`julia analyze.jl`) for idempotent updates.
+
 # Examples
 ```julia
-# First run: creates experiment, writes .elab_id
+# First run: creates experiment, writes .elab_id next to the script
 log_to_elab(title="FTIR: CN stretch fit", body="Results here")
 
-# Re-run: updates existing experiment
-log_to_elab(title="FTIR: CN stretch fit", body="Updated results")
+# Re-run: updates the existing experiment
+log_to_elab(title="FTIR: CN stretch fit", body="Updated results",
+            attachments=["fit_results.csv"], tags=["ftir"])
 ```
 """
 function log_to_elab(;

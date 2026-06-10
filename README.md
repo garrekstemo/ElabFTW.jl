@@ -36,6 +36,47 @@ test_connection()
 
 Or set `ELABFTW_URL` and `ELABFTW_API_KEY` environment variables for automatic configuration on package load.
 
+## Provenance: Log Analysis Results Idempotently
+
+`log_to_elab` is the workflow this package was built around: run an analysis
+script, push the results (body, plots, tags, metadata) to eLabFTW, re-run the
+script after fixing something — and update the *same* experiment instead of
+creating a duplicate.
+
+```julia
+using ElabFTW
+
+configure_elabftw(url = "https://your-instance.elabftw.net",
+                  api_key = ENV["ELABFTW_API_KEY"])
+
+# ... fit your data, save fit_results.csv and fit_plot.png ...
+
+log_to_elab(
+    title = "PL fit results",
+    body = "<h1>Results</h1><p>Peak at 632 nm</p>",
+    tags = ["pl", "sample-a"],
+    attachments = ["fit_results.csv", "fit_plot.png"],
+)
+```
+
+**How idempotency works:** the first run creates the experiment and writes a
+`.elab_id` marker file *next to the running script* (the file named by
+`Base.PROGRAM_FILE`). Subsequent runs of the same script with the same `title`
+find the marker and update the existing experiment — body and metadata are
+replaced, tags are reset to the ones you pass, and attachments with matching
+filenames are replaced.
+
+> [!WARNING]
+> **REPL caveat:** idempotency tracking needs a script file. In the REPL (or a
+> notebook) `Base.PROGRAM_FILE` is empty, so no `.elab_id` marker can be
+> written and **every call creates a new experiment**. Run your analysis as a
+> script (`julia analyze.jl`) to get idempotent updates.
+
+`log_to_elab` returns the experiment ID, so you can chain further calls
+(`add_step`, `link_experiment_to_item`, ...) onto the same entry. Commit the
+`.elab_id` file alongside the script if you want re-runs on other machines to
+update the same experiment.
+
 ### Create and Track an Experiment
 
 ```julia
@@ -66,19 +107,6 @@ sample_id = create_item(title="MoS2 sample A", category=5)
 link_experiment_to_item(id, sample_id)
 link_experiments(id, previous_experiment_id)
 ```
-
-### Idempotent Logging
-
-```julia
-log_to_elab(
-    title = "PL fit results",
-    body = "<h1>Results</h1><p>Peak at 632 nm</p>",
-    tags = ["pl", "sample-a"],
-    directory = "results/"
-)
-```
-
-`log_to_elab` creates a `.elab_id` file in the directory to track the experiment ID. Subsequent calls update the existing experiment instead of creating duplicates.
 
 ## See Also
 
