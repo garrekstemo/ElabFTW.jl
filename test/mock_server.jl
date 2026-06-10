@@ -294,6 +294,19 @@ function create_entity!(state::MockState, collection::String, data::Dict)
     return id
 end
 
+# eLabFTW stores `metadata` as a JSON string column; the real server rejects
+# requests where `metadata` arrives as a nested JSON object/array (error 3140).
+# Mirror that so client-side serialization bugs fail in the mock too.
+function reject_nonstring_metadata(data::Dict)
+    haskey(data, "metadata") || return nothing
+    m = data["metadata"]
+    (isnothing(m) || m isa AbstractString) && return nothing
+    return HTTP.Response(400, JSON.json(Dict(
+        "code" => 400,
+        "message" => "Error encoding JSON (3140): metadata must be a JSON-encoded string",
+    )))
+end
+
 function mock_handler(state::MockState)
     return function(req::HTTP.Request)
         method = req.method
@@ -439,6 +452,8 @@ function route(state::MockState, method::String, rest::Vector{String}, req::HTTP
             if collection == "compounds" && get(data, "action", "") == "duplicate"
                 return handle_compound_duplicate!(state, data)
             end
+            rejected = reject_nonstring_metadata(data)
+            isnothing(rejected) || return rejected
             id = create_entity!(state, collection, data)
             return created_response("/api/v2/$collection/$id")
         end
@@ -454,6 +469,8 @@ function route(state::MockState, method::String, rest::Vector{String}, req::HTTP
             entity = get(col, id, nothing)
             isnothing(entity) && return not_found()
             data = parse_json_body(req)
+            rejected = reject_nonstring_metadata(data)
+            isnothing(rejected) || return rejected
             if haskey(data, "action")
                 return apply_action!(entity, data)
             end

@@ -10,7 +10,7 @@ Create a new experiment in eLabFTW. Returns the experiment ID.
 - `title::String` — Experiment title
 - `body::String` — Experiment body (supports HTML/markdown)
 - `category::Union{Int, Nothing}` — Experiment category ID
-- `metadata::Union{Dict, Nothing}` — Extra metadata JSON
+- `metadata::Union{Dict, AbstractString, Nothing}` — Extra metadata (Dict is JSON-encoded; a String is sent as-is)
 
 # Example
 ```julia
@@ -21,7 +21,7 @@ function create_experiment(;
     title::String,
     body::String = "",
     category::Union{Int, Nothing} = nothing,
-    metadata::Union{Dict, Nothing} = nothing
+    metadata::Union{Dict, AbstractString, Nothing} = nothing
 )
     return _create_entity("experiments"; title=title, body=body, category=category, metadata=metadata)
 end
@@ -81,7 +81,7 @@ update_experiment(42; custom_id="FTIR-042", canread_base=30)
 function update_experiment(id::Int;
     title::Union{String, Nothing} = nothing,
     body::Union{String, Nothing} = nothing,
-    metadata::Union{Dict, Nothing} = nothing,
+    metadata::Union{Dict, AbstractString, Nothing} = nothing,
     kwargs...
 )
     return _update_entity("experiments", id;

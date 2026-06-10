@@ -15,7 +15,7 @@ Items represent lab resources: samples, instruments, reagents, etc.
 - `title::String` — Item title
 - `body::String` — Item body/description (supports markdown)
 - `category::Union{Int, Nothing}` — Items type (category) ID
-- `metadata::Union{Dict, Nothing}` — Extra metadata JSON
+- `metadata::Union{Dict, AbstractString, Nothing}` — Extra metadata (Dict is JSON-encoded; a String is sent as-is)
 
 # Example
 ```julia
@@ -26,7 +26,7 @@ function create_item(;
     title::String,
     body::String = "",
     category::Union{Int, Nothing} = nothing,
-    metadata::Union{Dict, Nothing} = nothing
+    metadata::Union{Dict, AbstractString, Nothing} = nothing
 )
     return _create_entity("items"; title=title, body=body, category=category, metadata=metadata)
 end
@@ -64,7 +64,7 @@ update_item(42; is_bookable=1, book_max_minutes=120, book_cancel_minutes=30)
 function update_item(id::Int;
     title::Union{String, Nothing} = nothing,
     body::Union{String, Nothing} = nothing,
-    metadata::Union{Dict, Nothing} = nothing,
+    metadata::Union{Dict, AbstractString, Nothing} = nothing,
     kwargs...
 )
     return _update_entity("items", id;

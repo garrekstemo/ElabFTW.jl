@@ -81,7 +81,7 @@ function log_to_elab(;
     attachments::Vector{String} = String[],
     tags::Vector{String} = String[],
     category::Union{Int, Nothing} = nothing,
-    metadata::Union{Dict, Nothing} = nothing
+    metadata::Union{Dict, AbstractString, Nothing} = nothing
 )
     existing = _read_elab_id()
 

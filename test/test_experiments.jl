@@ -175,14 +175,27 @@
     end
 
     @testset "Metadata" begin
+        # Regression: eLabFTW stores metadata as a JSON string column and
+        # rejects nested objects (error 3140), so Dict payloads must be
+        # JSON-encoded client-side. The mock mirrors the rejection, so these
+        # fail if the client ever sends a raw nested object again.
         meta = Dict("extra_field" => "value", "count" => 42)
         id = create_experiment(title="Meta test", metadata=meta)
         exp = get_experiment(id)
-        @test !isnothing(exp["metadata"])
+        @test exp["metadata"] isa AbstractString
+        parsed = JSON.parse(exp["metadata"])
+        @test parsed["extra_field"] == "value"
+        @test parsed["count"] == 42
 
         update_experiment(id; metadata=Dict("updated" => true))
         exp = get_experiment(id)
-        @test !isnothing(exp["metadata"])
+        @test exp["metadata"] isa AbstractString
+        @test JSON.parse(exp["metadata"])["updated"] === true
+
+        # Pre-encoded JSON strings pass through unchanged
+        update_experiment(id; metadata="{\"raw\":1}")
+        exp = get_experiment(id)
+        @test JSON.parse(exp["metadata"])["raw"] == 1
 
         delete_experiment(id)
     end
