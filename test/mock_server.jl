@@ -241,14 +241,14 @@ function apply_action!(entity::Dict, data::Dict)
     if action == "lock"
         # Toggle locked state (matches real server behavior).
         entity["locked"] = get(entity, "locked", 0) == 1 ? 0 : 1
-        return json_response(entity)
+        return json_response(entity_view(entity))
     elseif action == "pin"
         entity["is_pinned"] = get(entity, "is_pinned", 0) == 1 ? 0 : 1
-        return json_response(entity)
+        return json_response(entity_view(entity))
     elseif action == "timestamp"
         entity["timestamped"] = 1
         entity["timestamped_at"] = "2026-01-01 00:00:00"
-        return json_response(entity)
+        return json_response(entity_view(entity))
     elseif action == "sign"
         # Real server returns 500 when signing keys are not configured.
         # Mock the success path only when both passphrase and meaning are
@@ -256,19 +256,35 @@ function apply_action!(entity::Dict, data::Dict)
         haskey(data, "passphrase") && haskey(data, "meaning") || return HTTP.Response(500, "signing keys not configured")
         entity["signed"] = 1
         entity["meaning"] = data["meaning"]
-        return json_response(entity)
+        return json_response(entity_view(entity))
     end
     return HTTP.Response(400, "unknown action: $action")
 end
+
+# Per the spec (upstream/openapi.yaml entity schema), the entity `tags` field
+# is a nullable pipe-joined STRING ("vsc|ftir") and `body` is nullable — fresh
+# entities have both as JSON null. The tag OBJECTS live at the /tags
+# subresource; the mock keeps them in the internal `_tag_objects` field
+# (hidden from JSON views) and syncs the pipe-joined string from them.
+function sync_entity_tags!(entity::Dict)
+    objs = get!(entity, "_tag_objects", Any[])::Vector{Any}
+    entity["tags"] = isempty(objs) ? nothing : join([String(t["tag"]) for t in objs], "|")
+    return entity
+end
+
+# JSON view of an entity: hide internal underscore-prefixed fields.
+entity_view(entity::Dict) =
+    Dict{String, Any}(k => v for (k, v) in entity if !startswith(k, "_"))
 
 function create_entity!(state::MockState, collection::String, data::Dict)
     id = new_id!(state)
     entity = Dict{String, Any}(
         "id" => id,
         "title" => get(data, "title", "Untitled"),
-        "body" => get(data, "body", ""),
+        "body" => get(data, "body", nothing),
         "date" => "2026-01-01T00:00:00",
-        "tags" => Any[],
+        "tags" => nothing,
+        "_tag_objects" => Any[],
         "steps" => Any[],
         "uploads" => Any[],
         "comments" => Any[],
@@ -292,6 +308,19 @@ function create_entity!(state::MockState, collection::String, data::Dict)
     end
     state.collections[collection][id] = entity
     return id
+end
+
+# eLabFTW stores `metadata` as a JSON string column; the real server rejects
+# requests where `metadata` arrives as a nested JSON object/array (error 3140).
+# Mirror that so client-side serialization bugs fail in the mock too.
+function reject_nonstring_metadata(data::Dict)
+    haskey(data, "metadata") || return nothing
+    m = data["metadata"]
+    (isnothing(m) || m isa AbstractString) && return nothing
+    return HTTP.Response(400, JSON.json(Dict(
+        "code" => 400,
+        "message" => "Error encoding JSON (3140): metadata must be a JSON-encoded string",
+    )))
 end
 
 function mock_handler(state::MockState)
@@ -345,8 +374,9 @@ function route(state::MockState, method::String, rest::Vector{String}, req::HTTP
     if n == 1 && rest[1] == "import" && method == "POST"
         id = new_id!(state)
         state.collections["experiments"][id] = Dict{String, Any}(
-            "id" => id, "title" => "Imported", "body" => "", "date" => "2026-01-01T00:00:00",
-            "tags" => Any[], "steps" => Any[], "uploads" => Any[], "comments" => Any[],
+            "id" => id, "title" => "Imported", "body" => nothing, "date" => "2026-01-01T00:00:00",
+            "tags" => nothing, "_tag_objects" => Any[],
+            "steps" => Any[], "uploads" => Any[], "comments" => Any[],
             "experiments_links" => Any[], "items_links" => Any[], "compounds" => Any[],
             "category" => nothing, "category_title" => "", "metadata" => nothing,
         )
@@ -433,12 +463,14 @@ function route(state::MockState, method::String, rest::Vector{String}, req::HTTP
             start_idx = offset + 1
             end_idx = min(offset + limit, length(entities))
             result = start_idx <= length(entities) ? entities[start_idx:end_idx] : Dict{String, Any}[]
-            return json_response(result)
+            return json_response([entity_view(e) for e in result])
         elseif method == "POST"
             data = parse_json_body(req)
             if collection == "compounds" && get(data, "action", "") == "duplicate"
                 return handle_compound_duplicate!(state, data)
             end
+            rejected = reject_nonstring_metadata(data)
+            isnothing(rejected) || return rejected
             id = create_entity!(state, collection, data)
             return created_response("/api/v2/$collection/$id")
         end
@@ -449,24 +481,40 @@ function route(state::MockState, method::String, rest::Vector{String}, req::HTTP
         if method == "GET"
             entity = get(col, id, nothing)
             isnothing(entity) && return not_found()
-            return json_response(entity)
+            # Per spec, entity export is GET /{entity_type}/{id}?format=...
+            # (there is no /exports subresource). Non-json formats return the
+            # exported document as binary.
+            params = parse_query(req.target)
+            format = get(params, "format", "json")
+            if format != "json"
+                format in ("csv", "eln", "elnhtml", "qrpdf", "qrpng", "pdf", "pdfa", "zip", "zipa") ||
+                    return HTTP.Response(400, "invalid format: $format")
+                resp = HTTP.Response(200, Vector{UInt8}("mock export data"))
+                push!(resp.headers, "Content-Type" => "application/octet-stream")
+                return resp
+            end
+            return json_response(entity_view(entity))
         elseif method == "PATCH"
             entity = get(col, id, nothing)
             isnothing(entity) && return not_found()
             data = parse_json_body(req)
+            rejected = reject_nonstring_metadata(data)
+            isnothing(rejected) || return rejected
             if haskey(data, "action")
                 return apply_action!(entity, data)
             end
             # Snapshot a revision whenever `body` is being replaced with a
             # different value — matches the real server's "on meaningful edit"
             # behavior without trying to emulate min_days/min_delta config.
-            if haskey(data, "body") && get(entity, "body", "") != data["body"]
+            # `body` is nullable per the spec; coalesce for the snapshot.
+            old_body = something(get(entity, "body", nothing), "")
+            if haskey(data, "body") && old_body != data["body"]
                 revs = get!(entity, "revisions", Dict{Int, Dict{String, Any}}())
                 rev_id = new_id!(state)
                 revs[rev_id] = Dict{String, Any}(
                     "id" => rev_id,
-                    "body" => get(entity, "body", ""),
-                    "body_html" => get(entity, "body", ""),
+                    "body" => old_body,
+                    "body_html" => old_body,
                     "content_type" => 1,
                     "created_at" => "2026-01-01 00:00:00",
                     "fullname" => "Test User",
@@ -476,7 +524,7 @@ function route(state::MockState, method::String, rest::Vector{String}, req::HTTP
             for (k, v) in data
                 entity[k] = v
             end
-            return json_response(entity)
+            return json_response(entity_view(entity))
         elseif method == "DELETE"
             haskey(col, id) || return not_found()
             delete!(col, id)
@@ -747,9 +795,13 @@ function route_subresource(state::MockState, method::String, entity::Dict, colle
     entity_id::Int, subresource::String, rest::Vector{String}, req::HTTP.Request)
     n = length(rest)
 
-    # Tags
+    # Tags subresource: returns an array of tag OBJECTS (the entity's own
+    # `tags` field stays a nullable pipe-joined string — see sync_entity_tags!).
+    # NOTE: the spec's tag schema says the key is `id`, but the real server
+    # returns `tag_id` for entity tags (verified in test_live.jl) — the mock
+    # mirrors the server, not the spec, on that one key.
     if subresource == "tags"
-        tags = entity["tags"]::Vector{Any}
+        tags = get!(entity, "_tag_objects", Any[])::Vector{Any}
         if n == 0
             method == "GET" && return json_response(tags)
             if method == "POST"
@@ -757,17 +809,23 @@ function route_subresource(state::MockState, method::String, entity::Dict, colle
                 tag_name = get(data, "tag", "")
                 tag_id = new_id!(state)
                 push!(tags, Dict{String, Any}("tag_id" => tag_id, "tag" => tag_name))
+                sync_entity_tags!(entity)
                 if !haskey(state.team_tags, tag_id)
                     state.team_tags[tag_id] = Dict{String, Any}("tag" => tag_name, "item_count" => 1)
                 end
                 return created_response("/api/v2/$collection/$entity_id/tags/$tag_id")
             end
-            method == "DELETE" && (empty!(tags); return ok_response())
+            if method == "DELETE"
+                empty!(tags)
+                sync_entity_tags!(entity)
+                return ok_response()
+            end
         elseif n == 1
             tag_id = tryparse(Int, rest[1])
             isnothing(tag_id) && return not_found()
             if method == "PATCH"
                 filter!(t -> get(t, "tag_id", -1) != tag_id, tags)
+                sync_entity_tags!(entity)
                 return ok_response()
             end
         end
@@ -1055,13 +1113,6 @@ function route_subresource(state::MockState, method::String, entity::Dict, colle
             end
         end
         return not_found()
-    end
-
-    # Exports
-    if subresource == "exports" && n == 1 && method == "GET"
-        resp = HTTP.Response(200, Vector{UInt8}("mock export data"))
-        push!(resp.headers, "Content-Type" => "application/octet-stream")
-        return resp
     end
 
     return not_found()

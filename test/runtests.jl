@@ -8,8 +8,7 @@ include("mock_server.jl")
 @testset "ElabFTW.jl" begin
 
     @testset "Code quality (Aqua.jl)" begin
-        # Dates is a stdlib; General doesn't require stdlib compat but Aqua does.
-        Aqua.test_all(ElabFTW; deps_compat=(check_extras=false, ignore=[:Dates],))
+        Aqua.test_all(ElabFTW; deps_compat=(check_extras=false,))
     end
     # Pure tests (no HTTP server needed)
     include("test_pure.jl")

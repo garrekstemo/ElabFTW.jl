@@ -1,10 +1,11 @@
 using Documenter
+using Documenter.Remotes: GitHub
 using ElabFTW
 
 makedocs(
     sitename = "ElabFTW.jl",
     modules = [ElabFTW],
-    remotes = nothing,
+    repo = GitHub("garrekstemo", "ElabFTW.jl"),
     checkdocs = :exports,
     format = Documenter.HTML(
         prettyurls = get(ENV, "CI", nothing) == "true",

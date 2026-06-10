@@ -3,10 +3,11 @@
     print_experiments(Dict[]; io=buf)
     @test occursin("No experiments", String(take!(buf)))
 
+    # Real API shape: entity `tags` is a pipe-joined string (nullable).
     experiments = [
         Dict("id" => 42, "title" => "Test experiment",
              "date" => "2026-02-09T12:00:00",
-             "tags" => [Dict("tag" => "ftir")])
+             "tags" => "ftir|nh4scn")
     ]
     buf = IOBuffer()
     print_experiments(experiments; io=buf)
@@ -14,6 +15,28 @@
     @test occursin("42", output)
     @test occursin("Test experiment", output)
     @test occursin("ftir", output)
+    @test occursin("nh4scn", output)
+
+    # Fresh entities have tags = null (JSON.parse → nothing)
+    experiments = [
+        Dict("id" => 43, "title" => "Untagged experiment",
+             "date" => "2026-02-09T12:00:00",
+             "tags" => nothing)
+    ]
+    buf = IOBuffer()
+    print_experiments(experiments; io=buf)
+    output = String(take!(buf))
+    @test occursin("Untagged experiment", output)
+
+    # Tag-object arrays (e.g. from list_experiment_tags) still work
+    experiments = [
+        Dict("id" => 44, "title" => "Array-tagged",
+             "date" => "2026-02-09T12:00:00",
+             "tags" => [Dict("tag" => "vsc")])
+    ]
+    buf = IOBuffer()
+    print_experiments(experiments; io=buf)
+    @test occursin("vsc", String(take!(buf)))
 end
 
 @testset "print_items" begin
@@ -24,7 +47,7 @@ end
     items = [
         Dict("id" => 7, "title" => "MoS2 sample A",
              "category_title" => "Sample",
-             "tags" => [Dict("tag" => "mos2"), Dict("tag" => "tmdc")])
+             "tags" => "mos2|tmdc")
     ]
     buf = IOBuffer()
     print_items(items; io=buf)
@@ -34,6 +57,44 @@ end
     @test occursin("Sample", output)
     @test occursin("mos2", output)
     @test occursin("tmdc", output)
+
+    # Null tags (fresh item) must not crash
+    items = [
+        Dict("id" => 8, "title" => "Fresh item",
+             "category_title" => "Sample",
+             "tags" => nothing)
+    ]
+    buf = IOBuffer()
+    print_items(items; io=buf)
+    @test occursin("Fresh item", String(take!(buf)))
+end
+
+@testset "multibyte (UTF-8) truncation" begin
+    # A Japanese category title longer than the 14-char column crashed with
+    # StringIndexError: the char-count check (length) was followed by BYTE
+    # indexing (cat[1:11]), which lands mid-character for multibyte text.
+    items = [
+        Dict("id" => 9, "title" => "サンプルA",
+             "category_title" => "量子フォトサイエンス研究室サンプル",
+             "tags" => nothing)
+    ]
+    buf = IOBuffer()
+    print_items(items; io=buf)
+    output = String(take!(buf))
+    @test occursin("量子フォトサイエンス研...", output)
+    @test occursin("サンプルA", output)
+
+    # Long multibyte titles must truncate char-safely in both printers
+    long_title = repeat("研", 60)
+    buf = IOBuffer()
+    print_items([Dict("id" => 10, "title" => long_title,
+                      "category_title" => "Sample", "tags" => nothing)]; io=buf)
+    @test occursin(repeat("研", 39) * "...", String(take!(buf)))
+
+    buf = IOBuffer()
+    print_experiments([Dict("id" => 11, "title" => long_title,
+                            "date" => "2026-06-10", "tags" => nothing)]; io=buf)
+    @test occursin(repeat("研", 47) * "...", String(take!(buf)))
 end
 
 @testset "print_tags" begin

@@ -9,6 +9,24 @@ sync.
 | `openapi.yaml` | Snapshot of `apidoc/v2/openapi.yaml` from the eLabFTW release named in `.spec-version`. The baseline the monthly check diffs against. |
 | `.spec-version` | The eLabFTW release tag the snapshot was taken from (e.g. `5.5.12`). |
 
+## Provenance and licensing
+
+`openapi.yaml` is copied verbatim from the upstream eLabFTW repository:
+
+- **Source repository:** <https://github.com/elabftw/elabftw>
+- **Path in source:** `apidoc/v2/openapi.yaml`
+- **Fetched from release:** the tag recorded in [`.spec-version`](.spec-version)
+  (currently eLabFTW `5.5.12`)
+- **License:** [GNU AGPL-3.0](https://www.gnu.org/licenses/agpl-3.0.html), the
+  license of the eLabFTW project — **not** the MIT license that covers the
+  Julia code in this package.
+
+The spec file is included as **mere aggregation**: it is reference data used
+only by the CI drift-detection workflow described below. It is not compiled
+into, imported by, or otherwise linked with the ElabFTW.jl package code, so
+ElabFTW.jl itself remains MIT-licensed. If you redistribute `openapi.yaml`
+separately, the AGPL-3.0 terms apply to it.
+
 ## How the check works
 
 `.github/workflows/check-elab-api.yml` runs on the 1st of each month (and can be

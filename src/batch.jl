@@ -195,7 +195,9 @@ function update_experiments(;
             update_experiment(exp["id"]; body=new_body)
         elseif !isnothing(append_body)
             full_exp = get_experiment(exp["id"])
-            current_body = get(full_exp, "body", "")
+            # `body` is nullable in the API: present-but-null reads as
+            # `nothing`, which get's default does not protect against.
+            current_body = something(get(full_exp, "body", nothing), "")
             update_experiment(exp["id"]; body=current_body * append_body)
         end
     end
@@ -359,7 +361,8 @@ function update_items(;
             update_item(item["id"]; body=new_body)
         elseif !isnothing(append_body)
             full_item = get_item(item["id"])
-            current_body = get(full_item, "body", "")
+            # `body` is nullable in the API — see update_experiments.
+            current_body = something(get(full_item, "body", nothing), "")
             update_item(item["id"]; body=current_body * append_body)
         end
     end

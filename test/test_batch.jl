@@ -143,4 +143,20 @@
         @test get_item(iid)["body"] == "orig + extra"
         delete_item(iid)
     end
+
+    @testset "append_body to entity with null body" begin
+        # Fresh entities created without a body have body = JSON null (the
+        # spec marks `body` nullable). Appending must treat null as "".
+        id = create_experiment(title="append-null-exp")
+        @test get_experiment(id)["body"] === nothing
+        update_experiments(query="append-null-exp"; append_body="appended")
+        @test get_experiment(id)["body"] == "appended"
+        delete_experiment(id)
+
+        iid = create_item(title="append-null-item")
+        @test get_item(iid)["body"] === nothing
+        update_items(query="append-null-item"; append_body="appended")
+        @test get_item(iid)["body"] == "appended"
+        delete_item(iid)
+    end
 end

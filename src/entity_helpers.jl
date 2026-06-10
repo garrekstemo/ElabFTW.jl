@@ -3,6 +3,11 @@
 # These private helpers accept an `entity_type` string ("experiments" or "items")
 # and implement the common REST patterns shared across entity types.
 
+# eLabFTW stores `metadata` as a JSON string column; sending a nested object is
+# rejected (error 3140). Dicts are serialized; pre-encoded strings pass through.
+_encode_metadata(m::AbstractString) = m
+_encode_metadata(m) = JSON.json(m)
+
 """
     _create_entity(entity_type; title, body, category, metadata, template) -> Int
 
@@ -12,7 +17,7 @@ function _create_entity(entity_type::String;
     title::Union{String, Nothing} = nothing,
     body::Union{String, Nothing} = nothing,
     category::Union{Int, Nothing} = nothing,
-    metadata::Union{Dict, Nothing} = nothing,
+    metadata::Union{Dict, AbstractString, Nothing} = nothing,
     template::Union{Int, Nothing} = nothing
 )
     _check_enabled()
@@ -33,7 +38,7 @@ function _create_entity(entity_type::String;
         payload["category"] = category
     end
     if !isnothing(metadata)
-        payload["metadata"] = metadata
+        payload["metadata"] = _encode_metadata(metadata)
     end
 
     response = _elabftw_post(url, payload)
@@ -65,7 +70,7 @@ without enumerating them all.
 function _update_entity(entity_type::String, id::Int;
     title::Union{String, Nothing} = nothing,
     body::Union{String, Nothing} = nothing,
-    metadata::Union{Dict, Nothing} = nothing,
+    metadata::Union{Dict, AbstractString, Nothing} = nothing,
     kwargs...
 )
     _check_enabled()
@@ -80,7 +85,7 @@ function _update_entity(entity_type::String, id::Int;
         payload["content_type"] = 2  # Markdown
     end
     if !isnothing(metadata)
-        payload["metadata"] = metadata
+        payload["metadata"] = _encode_metadata(metadata)
     end
     for (k, v) in kwargs
         payload[String(k)] = v
