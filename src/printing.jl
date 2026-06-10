@@ -1,5 +1,15 @@
 # Pretty-printing for eLabFTW entities
 
+# The entity-level `tags` field arrives from the API as a nullable pipe-joined
+# string ("vsc|ftir" or JSON null → `nothing`). Tag-object arrays (the shape
+# returned by the /tags subresource, e.g. `list_experiment_tags`) are accepted
+# too for convenience.
+_format_tags(::Nothing) = ""
+_format_tags(tags::AbstractString) = join(split(tags, '|'), ", ")
+function _format_tags(tags::AbstractVector)
+    return join([t isa AbstractDict ? string(get(t, "tag", "")) : string(t) for t in tags], ", ")
+end
+
 """
     print_experiments(experiments; io=stdout)
 
@@ -30,9 +40,7 @@ function print_experiments(experiments::Vector; io::IO=stdout)
         date = length(raw_date) >= 10 ? raw_date[1:10] : raw_date
         raw_title = string(get(exp, "title", ""))
         t = length(raw_title) > 50 ? first(raw_title, 47) * "..." : raw_title
-        tags_list = get(exp, "tags", [])
-        tag_strs = [string(get(tag, "tag", tag)) for tag in tags_list]
-        tags_str = join(tag_strs, ", ")
+        tags_str = _format_tags(get(exp, "tags", nothing))
         println(io, rpad(id, 8), rpad(date, 12), rpad(t, 52), tags_str)
     end
 end
@@ -67,9 +75,7 @@ function print_items(items::Vector; io::IO=stdout)
         cat = length(cat) > 14 ? cat[1:11] * "..." : cat
         raw_title = string(get(item, "title", ""))
         t = length(raw_title) > 42 ? first(raw_title, 39) * "..." : raw_title
-        tags_list = get(item, "tags", [])
-        tag_strs = [string(get(tag, "tag", tag)) for tag in tags_list]
-        tags_str = join(tag_strs, ", ")
+        tags_str = _format_tags(get(item, "tags", nothing))
         println(io, rpad(id, 8), rpad(cat, 16), rpad(t, 44), tags_str)
     end
 end

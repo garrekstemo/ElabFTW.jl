@@ -48,14 +48,25 @@
     @testset "Tags" begin
         id = create_experiment(title="Tag test")
 
+        # Per the spec (entity schema), the entity-level `tags` field is a
+        # nullable pipe-joined STRING and `body` is nullable — fresh entities
+        # have both as JSON null.
+        fresh = get_experiment(id)
+        @test fresh["tags"] === nothing
+        @test fresh["body"] === nothing
+
         tag_experiment(id, "single-tag")
         tags = list_experiment_tags(id)
         @test length(tags) == 1
         @test tags[1]["tag"] == "single-tag"
 
+        # Entity-level field is now the pipe-joined string
+        @test get_experiment(id)["tags"] == "single-tag"
+
         tag_experiment(id, ["batch-a", "batch-b"])
         tags = list_experiment_tags(id)
         @test length(tags) == 3
+        @test get_experiment(id)["tags"] == "single-tag|batch-a|batch-b"
 
         tag_id = tags[1]["tag_id"]
         untag_experiment(id, tag_id)
@@ -65,6 +76,8 @@
         clear_experiment_tags(id)
         tags = list_experiment_tags(id)
         @test isempty(tags)
+        # Cleared tags → entity field back to null
+        @test get_experiment(id)["tags"] === nothing
 
         delete_experiment(id)
     end

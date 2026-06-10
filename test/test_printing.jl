@@ -3,10 +3,11 @@
     print_experiments(Dict[]; io=buf)
     @test occursin("No experiments", String(take!(buf)))
 
+    # Real API shape: entity `tags` is a pipe-joined string (nullable).
     experiments = [
         Dict("id" => 42, "title" => "Test experiment",
              "date" => "2026-02-09T12:00:00",
-             "tags" => [Dict("tag" => "ftir")])
+             "tags" => "ftir|nh4scn")
     ]
     buf = IOBuffer()
     print_experiments(experiments; io=buf)
@@ -14,6 +15,28 @@
     @test occursin("42", output)
     @test occursin("Test experiment", output)
     @test occursin("ftir", output)
+    @test occursin("nh4scn", output)
+
+    # Fresh entities have tags = null (JSON.parse → nothing)
+    experiments = [
+        Dict("id" => 43, "title" => "Untagged experiment",
+             "date" => "2026-02-09T12:00:00",
+             "tags" => nothing)
+    ]
+    buf = IOBuffer()
+    print_experiments(experiments; io=buf)
+    output = String(take!(buf))
+    @test occursin("Untagged experiment", output)
+
+    # Tag-object arrays (e.g. from list_experiment_tags) still work
+    experiments = [
+        Dict("id" => 44, "title" => "Array-tagged",
+             "date" => "2026-02-09T12:00:00",
+             "tags" => [Dict("tag" => "vsc")])
+    ]
+    buf = IOBuffer()
+    print_experiments(experiments; io=buf)
+    @test occursin("vsc", String(take!(buf)))
 end
 
 @testset "print_items" begin
@@ -24,7 +47,7 @@ end
     items = [
         Dict("id" => 7, "title" => "MoS2 sample A",
              "category_title" => "Sample",
-             "tags" => [Dict("tag" => "mos2"), Dict("tag" => "tmdc")])
+             "tags" => "mos2|tmdc")
     ]
     buf = IOBuffer()
     print_items(items; io=buf)
@@ -34,6 +57,16 @@ end
     @test occursin("Sample", output)
     @test occursin("mos2", output)
     @test occursin("tmdc", output)
+
+    # Null tags (fresh item) must not crash
+    items = [
+        Dict("id" => 8, "title" => "Fresh item",
+             "category_title" => "Sample",
+             "tags" => nothing)
+    ]
+    buf = IOBuffer()
+    print_items(items; io=buf)
+    @test occursin("Fresh item", String(take!(buf)))
 end
 
 @testset "print_tags" begin
