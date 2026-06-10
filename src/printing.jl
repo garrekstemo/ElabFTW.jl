@@ -4,6 +4,13 @@
 # string ("vsc|ftir" or JSON null → `nothing`). Tag-object arrays (the shape
 # returned by the /tags subresource, e.g. `list_experiment_tags`) are accepted
 # too for convenience.
+# Character-safe truncation to a column width. NEVER slice strings with byte
+# ranges (s[1:n]) after a char-count check — that throws StringIndexError on
+# multibyte UTF-8 (e.g. Japanese titles). `first(s, n)` counts characters.
+function _truncate(s::AbstractString, maxchars::Int)
+    return length(s) > maxchars ? first(s, maxchars - 3) * "..." : s
+end
+
 _format_tags(::Nothing) = ""
 _format_tags(tags::AbstractString) = join(split(tags, '|'), ", ")
 function _format_tags(tags::AbstractVector)
@@ -36,10 +43,8 @@ function print_experiments(experiments::Vector; io::IO=stdout)
 
     for exp in experiments
         id = string(get(exp, "id", ""))
-        raw_date = string(get(exp, "date", ""))
-        date = length(raw_date) >= 10 ? raw_date[1:10] : raw_date
-        raw_title = string(get(exp, "title", ""))
-        t = length(raw_title) > 50 ? first(raw_title, 47) * "..." : raw_title
+        date = first(string(get(exp, "date", "")), 10)
+        t = _truncate(string(get(exp, "title", "")), 50)
         tags_str = _format_tags(get(exp, "tags", nothing))
         println(io, rpad(id, 8), rpad(date, 12), rpad(t, 52), tags_str)
     end
@@ -71,10 +76,8 @@ function print_items(items::Vector; io::IO=stdout)
 
     for item in items
         id = string(get(item, "id", ""))
-        cat = string(get(item, "category_title", get(item, "category", "")))
-        cat = length(cat) > 14 ? cat[1:11] * "..." : cat
-        raw_title = string(get(item, "title", ""))
-        t = length(raw_title) > 42 ? first(raw_title, 39) * "..." : raw_title
+        cat = _truncate(string(get(item, "category_title", get(item, "category", ""))), 14)
+        t = _truncate(string(get(item, "title", "")), 42)
         tags_str = _format_tags(get(item, "tags", nothing))
         println(io, rpad(id, 8), rpad(cat, 16), rpad(t, 44), tags_str)
     end

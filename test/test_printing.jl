@@ -69,6 +69,34 @@ end
     @test occursin("Fresh item", String(take!(buf)))
 end
 
+@testset "multibyte (UTF-8) truncation" begin
+    # A Japanese category title longer than the 14-char column crashed with
+    # StringIndexError: the char-count check (length) was followed by BYTE
+    # indexing (cat[1:11]), which lands mid-character for multibyte text.
+    items = [
+        Dict("id" => 9, "title" => "サンプルA",
+             "category_title" => "量子フォトサイエンス研究室サンプル",
+             "tags" => nothing)
+    ]
+    buf = IOBuffer()
+    print_items(items; io=buf)
+    output = String(take!(buf))
+    @test occursin("量子フォトサイエンス研...", output)
+    @test occursin("サンプルA", output)
+
+    # Long multibyte titles must truncate char-safely in both printers
+    long_title = repeat("研", 60)
+    buf = IOBuffer()
+    print_items([Dict("id" => 10, "title" => long_title,
+                      "category_title" => "Sample", "tags" => nothing)]; io=buf)
+    @test occursin(repeat("研", 39) * "...", String(take!(buf)))
+
+    buf = IOBuffer()
+    print_experiments([Dict("id" => 11, "title" => long_title,
+                            "date" => "2026-06-10", "tags" => nothing)]; io=buf)
+    @test occursin(repeat("研", 47) * "...", String(take!(buf)))
+end
+
 @testset "print_tags" begin
     buf = IOBuffer()
     print_tags(Any[]; io=buf)
