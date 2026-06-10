@@ -131,20 +131,34 @@ function import_file(filepath::String;
     end
 end
 
-"""
-    create_export(entity_type::Symbol, id::Int; format="eln") -> String
+# Export formats accepted by GET /{entity_type}/{id}?format=... per the spec
+# ("json" is the default API representation, not a file export).
+const _EXPORT_FORMATS = ("csv", "eln", "elnhtml", "json", "qrpdf", "qrpng",
+                         "pdf", "pdfa", "zip", "zipa")
 
-Create an export of an entity. Returns the export ID/path.
+"""
+    create_export(entity_type::Symbol, id::Int; format="eln") -> Vector{UInt8}
+
+Export an entity in the requested format and return the raw bytes
+(the whole export is buffered in memory). Use [`download_export`](@ref) to
+save directly to a file.
+
+The API serves exports from the entity endpoint itself:
+`GET /api/v2/{entity_type}/{id}?format=...`.
 
 # Arguments
 - `entity_type::Symbol` — `:experiments` or `:items`
 - `id::Int` — Entity ID
-- `format::String` — Export format: "eln", "pdf", "zip" (default: "eln")
+- `format::String` — One of `"csv"`, `"eln"`, `"elnhtml"`, `"json"`,
+  `"qrpdf"`, `"qrpng"`, `"pdf"`, `"pdfa"` (archive PDF/A), `"zip"`,
+  `"zipa"` (archive zip). Default: `"eln"`.
 """
 function create_export(entity_type::Symbol, id::Int; format::String="eln")
     _check_enabled()
+    format in _EXPORT_FORMATS ||
+        throw(ArgumentError("create_export: format must be one of $(join(_EXPORT_FORMATS, ", ")); got \"$format\""))
     etype = String(entity_type)
-    url = "$(_elabftw_config.url)/api/v2/$etype/$id/exports/$format"
+    url = "$(_elabftw_config.url)/api/v2/$etype/$id?format=$format"
     response = _elabftw_request(url; accept="application/octet-stream")
     # Return the raw binary content — caller should write to file
     return response.body
@@ -159,7 +173,7 @@ Export an entity and save to a local file.
 - `entity_type::Symbol` — `:experiments` or `:items`
 - `id::Int` — Entity ID
 - `filepath::String` — Local path to save the export
-- `format::String` — Export format: "eln", "pdf", "zip" (default: "eln")
+- `format::String` — Export format (see [`create_export`](@ref)); default `"eln"`
 
 # Example
 ```julia

@@ -481,6 +481,18 @@ function route(state::MockState, method::String, rest::Vector{String}, req::HTTP
         if method == "GET"
             entity = get(col, id, nothing)
             isnothing(entity) && return not_found()
+            # Per spec, entity export is GET /{entity_type}/{id}?format=...
+            # (there is no /exports subresource). Non-json formats return the
+            # exported document as binary.
+            params = parse_query(req.target)
+            format = get(params, "format", "json")
+            if format != "json"
+                format in ("csv", "eln", "elnhtml", "qrpdf", "qrpng", "pdf", "pdfa", "zip", "zipa") ||
+                    return HTTP.Response(400, "invalid format: $format")
+                resp = HTTP.Response(200, Vector{UInt8}("mock export data"))
+                push!(resp.headers, "Content-Type" => "application/octet-stream")
+                return resp
+            end
             return json_response(entity_view(entity))
         elseif method == "PATCH"
             entity = get(col, id, nothing)
@@ -1101,13 +1113,6 @@ function route_subresource(state::MockState, method::String, entity::Dict, colle
             end
         end
         return not_found()
-    end
-
-    # Exports
-    if subresource == "exports" && n == 1 && method == "GET"
-        resp = HTTP.Response(200, Vector{UInt8}("mock export data"))
-        push!(resp.headers, "Content-Type" => "application/octet-stream")
-        return resp
     end
 
     return not_found()

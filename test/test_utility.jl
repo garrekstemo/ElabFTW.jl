@@ -93,6 +93,13 @@
         @test read(tmp) == expected
         rm(tmp; force=true)
 
+        # Other spec formats route through the same entity endpoint
+        pdf_bytes = create_export(:experiments, id; format="pdf")
+        @test String(copy(pdf_bytes)) == "mock export data"
+
+        # Formats outside the spec enum are rejected before any HTTP call
+        @test_throws ArgumentError create_export(:experiments, id; format="docx")
+
         delete_experiment(id)
     end
 
