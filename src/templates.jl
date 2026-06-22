@@ -34,13 +34,13 @@ Create a new experiment template. Returns the template ID.
 id = create_experiment_template(title="FTIR analysis template", body="## Protocol\\n...")
 ```
 """
-function create_experiment_template(; title::String, body::String="")
+function create_experiment_template(; title::String, body::String="", content_type::Int=2)
     _check_enabled()
     url = "$(_elabftw_config.url)/api/v2/experiments_templates"
     payload = Dict{String, Any}("title" => title)
     if !isempty(body)
         payload["body"] = body
-        payload["content_type"] = 2
+        payload["content_type"] = content_type
     end
     response = _elabftw_post(url, payload)
     return _parse_id_from_response(response)
@@ -65,7 +65,8 @@ Update an experiment template.
 """
 function update_experiment_template(id::Int;
     title::Union{String, Nothing}=nothing,
-    body::Union{String, Nothing}=nothing
+    body::Union{String, Nothing}=nothing,
+    content_type::Int=2
 )
     _check_enabled()
     url = "$(_elabftw_config.url)/api/v2/experiments_templates/$id"
@@ -73,7 +74,7 @@ function update_experiment_template(id::Int;
     !isnothing(title) && (payload["title"] = title)
     if !isnothing(body)
         payload["body"] = body
-        payload["content_type"] = 2
+        payload["content_type"] = content_type
     end
     isempty(payload) && return nothing
     _elabftw_patch(url, payload)
@@ -143,13 +144,13 @@ Create a new items type. Returns the type ID.
 id = create_items_type(title="Sample", body="Template for lab samples")
 ```
 """
-function create_items_type(; title::String, body::String="", metadata::Union{Dict, AbstractString, Nothing}=nothing)
+function create_items_type(; title::String, body::String="", content_type::Int=2, metadata::Union{Dict, AbstractString, Nothing}=nothing)
     _check_enabled()
     url = "$(_elabftw_config.url)/api/v2/items_types"
     payload = Dict{String, Any}("title" => title)
     if !isempty(body)
         payload["body"] = body
-        payload["content_type"] = 2
+        payload["content_type"] = content_type
     end
     !isnothing(metadata) && (payload["metadata"] = _encode_metadata(metadata))
     response = _elabftw_post(url, payload)
@@ -176,6 +177,7 @@ Update an items type.
 function update_items_type(id::Int;
     title::Union{String, Nothing}=nothing,
     body::Union{String, Nothing}=nothing,
+    content_type::Int=2,
     metadata::Union{Dict, AbstractString, Nothing}=nothing
 )
     _check_enabled()
@@ -184,7 +186,7 @@ function update_items_type(id::Int;
     !isnothing(title) && (payload["title"] = title)
     if !isnothing(body)
         payload["body"] = body
-        payload["content_type"] = 2
+        payload["content_type"] = content_type
     end
     !isnothing(metadata) && (payload["metadata"] = _encode_metadata(metadata))
     isempty(payload) && return nothing

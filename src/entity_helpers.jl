@@ -9,13 +9,15 @@ _encode_metadata(m::AbstractString) = m
 _encode_metadata(m) = JSON.json(m)
 
 """
-    _create_entity(entity_type; title, body, category, metadata, template) -> Int
+    _create_entity(entity_type; title, body, content_type, category, metadata, template) -> Int
 
-Create a new entity. Returns the entity ID.
+Create a new entity. Returns the entity ID. `content_type` is the eLabFTW body
+type: `2` = Markdown (default), `1` = HTML.
 """
 function _create_entity(entity_type::String;
     title::Union{String, Nothing} = nothing,
     body::Union{String, Nothing} = nothing,
+    content_type::Int = 2,
     category::Union{Int, Nothing} = nothing,
     metadata::Union{Dict, AbstractString, Nothing} = nothing,
     template::Union{Int, Nothing} = nothing
@@ -32,7 +34,7 @@ function _create_entity(entity_type::String;
     end
     if !isnothing(body) && !isempty(body)
         payload["body"] = body
-        payload["content_type"] = 2  # Markdown
+        payload["content_type"] = content_type
     end
     if !isnothing(category)
         payload["category"] = category
@@ -58,18 +60,19 @@ function _get_entity(entity_type::String, id::Int)
 end
 
 """
-    _update_entity(entity_type, id; title, body, metadata, kwargs...)
+    _update_entity(entity_type, id; title, body, content_type, metadata, kwargs...)
 
 Update an existing entity. `title`, `body`, and `metadata` have special
-handling (body sets `content_type: 2` Markdown); every other kwarg is
-forwarded verbatim into the PATCH body. This reaches fields like `rating`,
-`status`, `date`, `canread`, `canwrite`, `custom_id` on experiments and
-`is_bookable`, `canbook_base`, `book_max_minutes`, `is_procurable` on items
-without enumerating them all.
+handling (a non-nothing `body` sets `content_type`, default `2` = Markdown;
+pass `content_type=1` for HTML); every other kwarg is forwarded verbatim into
+the PATCH body. This reaches fields like `rating`, `status`, `date`, `canread`,
+`canwrite`, `custom_id` on experiments and `is_bookable`, `canbook_base`,
+`book_max_minutes`, `is_procurable` on items without enumerating them all.
 """
 function _update_entity(entity_type::String, id::Int;
     title::Union{String, Nothing} = nothing,
     body::Union{String, Nothing} = nothing,
+    content_type::Int = 2,
     metadata::Union{Dict, AbstractString, Nothing} = nothing,
     kwargs...
 )
@@ -82,7 +85,7 @@ function _update_entity(entity_type::String, id::Int;
     end
     if !isnothing(body)
         payload["body"] = body
-        payload["content_type"] = 2  # Markdown
+        payload["content_type"] = content_type
     end
     if !isnothing(metadata)
         payload["metadata"] = _encode_metadata(metadata)

@@ -58,11 +58,13 @@ end
 # =============================================================================
 
 """
-    log_to_elab(; title, body, attachments, tags, category, metadata) -> Int
+    log_to_elab(; title, body, content_type, attachments, tags, category, metadata) -> Int
 
 Log analysis results to eLabFTW. Idempotent: if a `.elab_id` file exists next
 to the running script with a matching title, updates the existing experiment
 instead of creating a new one.
+
+`body` is sent with `content_type` — `2` = Markdown (default), `1` = HTML.
 
 Returns the experiment ID.
 
@@ -92,6 +94,7 @@ log_to_elab(title="FTIR: CN stretch fit", body="Updated results",
 function log_to_elab(;
     title::String,
     body::String = "",
+    content_type::Int = 2,
     attachments::Vector{String} = String[],
     tags::Vector{String} = String[],
     category::Union{Int, Nothing} = nothing,
@@ -105,7 +108,7 @@ function log_to_elab(;
         # `tags`, the experiment's tag set must shrink accordingly rather
         # than accumulate previous runs' labels.
         id = existing.id
-        update_experiment(id; title=title, body=body, metadata=metadata)
+        update_experiment(id; title=title, body=body, content_type=content_type, metadata=metadata)
         _replace_attachments(id, attachments)
         clear_experiment_tags(id)
         isempty(tags) || tag_experiment(id, tags)
@@ -113,7 +116,7 @@ function log_to_elab(;
         @info "eLabFTW: updated experiment" id url=exp_url
     else
         # Create new experiment
-        id = create_experiment(; title=title, body=body, category=category, metadata=metadata)
+        id = create_experiment(; title=title, body=body, content_type=content_type, category=category, metadata=metadata)
         for filepath in attachments
             upload_to_experiment(id, filepath; comment=basename(filepath))
         end

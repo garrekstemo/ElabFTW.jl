@@ -10,7 +10,6 @@ Global configuration state for the eLabFTW connection.
 - `api_key::Union{String, Nothing}` — API key for authentication
 - `enabled::Bool` — whether the integration is active
 - `cache_dir::String` — local directory for caching downloaded files
-- `category_ids::Dict{Symbol, Int}` — map of spectrum types to eLabFTW category IDs (e.g., `:raman => 14`)
 
 Typically not constructed directly. Use [`configure_elabftw`](@ref) to set up the connection.
 """
@@ -19,15 +18,14 @@ mutable struct ElabFTWConfig
     api_key::Union{String, Nothing}
     enabled::Bool
     cache_dir::String
-    category_ids::Dict{Symbol, Int}  # :raman => 14, :ftir => 15, etc.
     max_retries::Int
     retry_base_delay::Float64
 end
 
-const _elabftw_config = ElabFTWConfig(nothing, nothing, false, "", Dict(), 3, 0.5)
+const _elabftw_config = ElabFTWConfig(nothing, nothing, false, "", 3, 0.5)
 
 """
-    configure_elabftw(; url, api_key, cache_dir, category_ids)
+    configure_elabftw(; url, api_key, cache_dir, max_retries, retry_base_delay)
 
 Configure eLabFTW connection.
 
@@ -35,14 +33,14 @@ Configure eLabFTW connection.
 - `url::String` — eLabFTW instance URL (e.g., "https://lab.elabftw.net")
 - `api_key::String` — API key (get from User Panel → API Keys in eLabFTW)
 - `cache_dir::String` — Local cache directory (default: "~/.cache/elabftw")
-- `category_ids::Dict{Symbol,Int}` — Map of spectrum types to eLabFTW category IDs
+- `max_retries::Int` — Retries for transient (5xx/429) HTTP failures (default: 3)
+- `retry_base_delay::Real` — Base delay in seconds for exponential backoff (default: 0.5)
 
 # Example
 ```julia
 configure_elabftw(
     url = "https://lab.elabftw.net",
     api_key = ENV["ELABFTW_API_KEY"],
-    category_ids = Dict(:raman => 14, :ftir => 15)
 )
 ```
 """
@@ -50,14 +48,12 @@ function configure_elabftw(;
     url::String,
     api_key::String,
     cache_dir::String = joinpath(homedir(), ".cache", "elabftw"),
-    category_ids::Dict{Symbol, Int} = Dict{Symbol, Int}(),
     max_retries::Int = 3,
     retry_base_delay::Real = 0.5,
 )
     _elabftw_config.url = rstrip(url, '/')
     _elabftw_config.api_key = api_key
     _elabftw_config.cache_dir = cache_dir
-    _elabftw_config.category_ids = category_ids
     _elabftw_config.max_retries = max_retries
     _elabftw_config.retry_base_delay = Float64(retry_base_delay)
     _elabftw_config.enabled = true
