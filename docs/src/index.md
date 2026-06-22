@@ -105,6 +105,7 @@ link_experiments(id, previous_experiment_id)
 log_to_elab(
     title = "PL fit results",
     body  = "<h1>Results</h1><p>Peak at 632 nm</p>",
+    content_type = 1,                       # 1 = HTML; default 2 = Markdown
     tags  = ["pl", "sample-a"],
     attachments = ["figures/pl_fit.pdf"]
 )

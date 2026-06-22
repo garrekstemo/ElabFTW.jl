@@ -2,28 +2,32 @@
 # All signatures and docstrings preserved from the original monolithic file.
 
 """
-    create_experiment(; title, body, category, metadata) -> Int
+    create_experiment(; title, body, content_type, category, metadata) -> Int
 
 Create a new experiment in eLabFTW. Returns the experiment ID.
 
 # Arguments
 - `title::String` — Experiment title
-- `body::String` — Experiment body (supports HTML/markdown)
+- `body::String` — Experiment body. Sent with `content_type` (default Markdown).
+- `content_type::Int` — Body type: `2` = Markdown (default), `1` = HTML
 - `category::Union{Int, Nothing}` — Experiment category ID
 - `metadata::Union{Dict, AbstractString, Nothing}` — Extra metadata (Dict is JSON-encoded; a String is sent as-is)
 
 # Example
 ```julia
 id = create_experiment(title="FTIR measurement", body="CN stretch region")
+id = create_experiment(title="Run 3", body="<h1>Results</h1>", content_type=1)  # HTML
 ```
 """
 function create_experiment(;
     title::String,
     body::String = "",
+    content_type::Int = 2,
     category::Union{Int, Nothing} = nothing,
     metadata::Union{Dict, AbstractString, Nothing} = nothing
 )
-    return _create_entity("experiments"; title=title, body=body, category=category, metadata=metadata)
+    return _create_entity("experiments"; title=title, body=body,
+                          content_type=content_type, category=category, metadata=metadata)
 end
 
 """
@@ -73,7 +77,8 @@ passed as an additional keyword and is forwarded verbatim — e.g.
 
 # Example
 ```julia
-update_experiment(42; body="Updated analysis results")
+update_experiment(42; body="Updated analysis results")           # Markdown (default)
+update_experiment(42; body="<p>Results</p>", content_type=1)     # HTML
 update_experiment(42; rating=4, status=7)
 update_experiment(42; custom_id="FTIR-042", canread_base=30)
 ```

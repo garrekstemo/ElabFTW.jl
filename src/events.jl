@@ -72,7 +72,9 @@ Update a scheduler event. The eLabFTW PATCH contract is target-based, so one
 API call is issued per provided field.
 
 # Keyword arguments
-- `title::String` — New event title.
+- `title::String` — New event title. Sent as a `target = "title"` PATCH; this
+  target is accepted by the server but is **not listed in the published OpenAPI
+  spec**, so it may change in a future eLabFTW release.
 - `start::String`, `end_::String` — Reschedule the slot. Both must be provided
   together (the API requires it); format `"YYYY-MM-DD HH:MM:SS"`.
 - `experiment::Int` — Bind the booking to an experiment ID.

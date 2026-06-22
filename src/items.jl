@@ -13,7 +13,8 @@ Items represent lab resources: samples, instruments, reagents, etc.
 
 # Arguments
 - `title::String` — Item title
-- `body::String` — Item body/description (supports markdown)
+- `body::String` — Item body/description. Sent with `content_type` (default Markdown).
+- `content_type::Int` — Body type: `2` = Markdown (default), `1` = HTML
 - `category::Union{Int, Nothing}` — Items type (category) ID
 - `metadata::Union{Dict, AbstractString, Nothing}` — Extra metadata (Dict is JSON-encoded; a String is sent as-is)
 
@@ -25,10 +26,12 @@ id = create_item(title="MoS2 sample A", category=5)
 function create_item(;
     title::String,
     body::String = "",
+    content_type::Int = 2,
     category::Union{Int, Nothing} = nothing,
     metadata::Union{Dict, AbstractString, Nothing} = nothing
 )
-    return _create_entity("items"; title=title, body=body, category=category, metadata=metadata)
+    return _create_entity("items"; title=title, body=body,
+                          content_type=content_type, category=category, metadata=metadata)
 end
 
 """
@@ -57,7 +60,8 @@ booking schema: `is_bookable=1`, `canbook_base=30`, `book_max_minutes=120`,
 
 # Example
 ```julia
-update_item(42; body="Updated sample description")
+update_item(42; body="Updated sample description")            # Markdown (default)
+update_item(42; body="<p>Updated</p>", content_type=1)        # HTML
 update_item(42; is_bookable=1, book_max_minutes=120, book_cancel_minutes=30)
 ```
 """

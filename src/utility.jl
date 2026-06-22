@@ -111,24 +111,25 @@ function import_file(filepath::String;
     isfile(filepath) || throw(ArgumentError("File not found: $filepath"))
     etype = String(entity_type)
     url = "$(_elabftw_config.url)/api/v2/import"
-    headers = [
-        "Authorization" => _elabftw_config.api_key,
-    ]
-    io = open(filepath)
-    try
-        form_data = Dict{String, Any}(
-            "file" => io,
-            "entity_type" => etype
-        )
-        if !isnothing(category)
-            form_data["category"] = string(category)
+    headers = _auth_headers()
+    # Route through _run_with_retry so import_file gets the same typed errors,
+    # transient-failure backoff, and redirect=false handling as every other
+    # call (the "every failure is an ElabFTWError" contract). The file IO is
+    # opened inside the closure so each retry attempt reads from the start.
+    response = _run_with_retry(url) do
+        io = open(filepath)
+        try
+            form_data = Dict{String, Any}(
+                "file" => io,
+                "entity_type" => etype,
+            )
+            isnothing(category) || (form_data["category"] = string(category))
+            HTTP.post(url, headers, HTTP.Form(form_data); _HTTP_OPTS...)
+        finally
+            close(io)
         end
-        form = HTTP.Form(form_data)
-        response = HTTP.post(url, headers, form)
-        return _parse_id_from_response(response)
-    finally
-        close(io)
     end
+    return _parse_id_from_response(response)
 end
 
 # Export formats accepted by GET /{entity_type}/{id}?format=... per the spec

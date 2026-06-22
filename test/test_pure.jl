@@ -3,7 +3,6 @@
     saved_key = ElabFTW._elabftw_config.api_key
     saved_enabled = ElabFTW._elabftw_config.enabled
     saved_cache = ElabFTW._elabftw_config.cache_dir
-    saved_cats = copy(ElabFTW._elabftw_config.category_ids)
 
     try
         ElabFTW._elabftw_config.url = nothing
@@ -29,7 +28,6 @@
         ElabFTW._elabftw_config.api_key = saved_key
         ElabFTW._elabftw_config.enabled = saved_enabled
         ElabFTW._elabftw_config.cache_dir = saved_cache
-        ElabFTW._elabftw_config.category_ids = saved_cats
     end
 end
 
@@ -48,7 +46,7 @@ end
 @testset "_get_cache_path" begin
     ElabFTW._elabftw_config.cache_dir = "/tmp/test_cache"
     @test ElabFTW._get_cache_path(10, 5, "data.csv") == "/tmp/test_cache/10/data.csv"
-    @test ElabFTW._get_cache_path(10, 5, "") == "/tmp/test_cache/10/upload_5.csv"
+    @test ElabFTW._get_cache_path(10, 5, "") == "/tmp/test_cache/10/upload_5.bin"
 end
 
 @testset "elabftw_cache_info empty" begin

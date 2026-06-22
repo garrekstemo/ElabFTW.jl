@@ -109,7 +109,9 @@ end
 function _get_cache_path(item_id::Int, upload_id::Int, filename::String)
     cache_dir = _elabftw_config.cache_dir
     if isempty(filename)
-        filename = "upload_$upload_id.csv"
+        # No server-provided name: the content type is unknown, so use a neutral
+        # extension rather than ".csv" (which falsely implies a CSV file).
+        filename = "upload_$upload_id.bin"
     end
     return joinpath(cache_dir, string(item_id), filename)
 end
