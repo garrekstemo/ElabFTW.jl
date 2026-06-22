@@ -6,6 +6,32 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-06-22
+
+### Removed
+
+- **Breaking:** the unused `category_ids` field on `ElabFTWConfig` and the
+  corresponding `category_ids` keyword of `configure_elabftw`. The value was
+  stored but never read by any code path; callers that passed `category_ids`
+  must drop it.
+
+### Added
+
+- `content_type` keyword on entity creation and update (`2` = Markdown,
+  `1` = HTML; default `2`), so experiment and item bodies can be submitted as
+  HTML. The default preserves the previous Markdown-only behavior, so existing
+  callers are unaffected.
+
+### Fixed
+
+- `import_file` now runs through the shared `_run_with_retry` path like every
+  other API call: uploads retry on transient 5xx/429 failures and raise the
+  same typed `ElabFTWError`s as the rest of the client. The file handle is
+  opened inside each retry attempt so a retry re-reads from the start of the
+  file.
+- Downloaded attachments that arrive without a server-provided filename are now
+  cached with a neutral `.bin` extension instead of a misleading `.csv`.
+
 ## [0.1.0] - 2026-06-10
 
 First release.
@@ -42,4 +68,5 @@ First release.
   CI, and a monthly CI drift check against the vendored upstream OpenAPI spec
   (`upstream/openapi.yaml`, eLabFTW 5.5.12).
 
+[0.2.0]: https://github.com/garrekstemo/ElabFTW.jl/releases/tag/v0.2.0
 [0.1.0]: https://github.com/garrekstemo/ElabFTW.jl/releases/tag/v0.1.0
