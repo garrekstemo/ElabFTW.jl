@@ -59,7 +59,7 @@ function _run_with_retry(do_request, url::String)
         try
             return do_request()
         catch e
-            if e isa HTTP.ExceptionRequest.StatusError
+            if e isa HTTP.StatusError
                 status = e.status
                 last_response = e.response
                 if (status >= 500 || status == 429) && attempt <= max_retries
