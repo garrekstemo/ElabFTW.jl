@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.1] - 2026-07-13
+
+### Changed
+
+- Widened HTTP.jl compat to `1, 2`, so the client now works with HTTP.jl v2 in
+  addition to v1. The retry handler catches the top-level `HTTP.StatusError`
+  (the identical type in both majors) rather than the v1-only
+  `HTTP.ExceptionRequest.StatusError` submodule path that v2 removed. No public
+  API changes.
+
 ## [0.2.0] - 2026-06-22
 
 ### Removed
@@ -68,5 +78,6 @@ First release.
   CI, and a monthly CI drift check against the vendored upstream OpenAPI spec
   (`upstream/openapi.yaml`, eLabFTW 5.5.12).
 
+[0.2.1]: https://github.com/garrekstemo/ElabFTW.jl/releases/tag/v0.2.1
 [0.2.0]: https://github.com/garrekstemo/ElabFTW.jl/releases/tag/v0.2.0
 [0.1.0]: https://github.com/garrekstemo/ElabFTW.jl/releases/tag/v0.1.0
