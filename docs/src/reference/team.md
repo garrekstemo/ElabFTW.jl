@@ -12,9 +12,9 @@ delete_team_tag
 
 ## Categories
 
-Categories are lightweight `(title, color, is_default)` labels that
-experiments and items reference via their `category` field. `entity_type`
-is `:experiments` or `:items`.
+Categories are lightweight `(title, color)` labels that experiments and
+items reference via their `category` field. `entity_type` is `:experiments`
+or `:items`.
 
 ```@docs
 list_experiments_categories

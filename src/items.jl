@@ -108,7 +108,7 @@ duplicate_item(id::Int; copy_files::Bool=false, link_to_original::Bool=true) =
 """
     list_items(; limit, offset, order, sort,
                cat, owner, state, status, scope,
-               related, related_origin) -> Vector{Dict}
+               related, related_origin, full) -> Vector{Dict}
 
 List items (resources) from eLabFTW with pagination, sorting, and filtering.
 
@@ -123,6 +123,7 @@ List items (resources) from eLabFTW with pagination, sorting, and filtering.
 - `status::Int` — Status ID
 - `scope::Int` — 1 self, 2 team, 3 everything
 - `related::Int` + `related_origin::Symbol` — restrict to items linked to this entity
+- `full::Int` — `1` returns all columns of each entry; `0` or omitted returns default columns
 
 # Examples
 ```julia
@@ -130,6 +131,7 @@ list_items(limit=10)
 list_items(state=2)                # archived items
 list_items(cat=[104, 107])         # instruments + samples (QPS Lab)
 list_items(related=17, related_origin=:experiments)
+list_items(full=1)                 # all columns
 ```
 """
 function list_items(;
@@ -144,17 +146,18 @@ function list_items(;
     scope::Union{Int, Nothing} = nothing,
     related::Union{Int, Nothing} = nothing,
     related_origin::Union{Symbol, Nothing} = nothing,
+    full::Union{Int, Nothing} = nothing,
 )
     return _list_entities("items";
         limit=limit, offset=offset, order=order, sort=sort,
         cat=cat, owner=owner, state=state, status=status, scope=scope,
-        related=related, related_origin=related_origin)
+        related=related, related_origin=related_origin, full=full)
 end
 
 """
     search_items(; query, tags, limit, offset, order, sort,
                  cat, owner, state, status, scope, extended,
-                 related, related_origin) -> Vector{Dict}
+                 related, related_origin, full) -> Vector{Dict}
 
 Search items (resources) in eLabFTW by text query, tags, and other filters.
 
@@ -186,11 +189,12 @@ function search_items(;
     extended::Union{String, Nothing} = nothing,
     related::Union{Int, Nothing} = nothing,
     related_origin::Union{Symbol, Nothing} = nothing,
+    full::Union{Int, Nothing} = nothing,
 )
     return _list_entities("items";
         query=query, tags=tags, limit=limit, offset=offset, order=order, sort=sort,
         cat=cat, owner=owner, state=state, status=status, scope=scope,
-        extended=extended, related=related, related_origin=related_origin)
+        extended=extended, related=related, related_origin=related_origin, full=full)
 end
 
 # =============================================================================

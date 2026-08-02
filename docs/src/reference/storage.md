@@ -34,8 +34,10 @@ A few quirks worth knowing:
 - `GET /storage_units` (what `list_storage_units()` calls with no arguments)
   returns **container assignments**, not the list of units. Pass
   `hierarchy=true` to get the unit tree.
-- `PATCH` on a storage unit only accepts `name`. Re-parenting is silently
-  dropped by the server — to move a unit, delete and re-create it.
+- `PATCH` on a storage unit accepts `name`, `parent_id`, or both (at least
+  one is required). Pass `parent_id` to reparent a unit (and everything under
+  it) in place. Use the `elabftw_http` escape hatch to move a unit to the
+  root (`parent_id: null` cannot be expressed as a Julia `Int`).
 - The `qty_unit` field is stored as a free-form string truncated to 10
   characters. The spec lists `"bar"`, `"•"`, `"m"`, `"μL"`, `"mL"`, `"L"`,
   `"μg"`, `"mg"`, `"g"`, `"kg"` — the UI expects these, but the server will

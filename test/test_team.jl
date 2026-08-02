@@ -36,7 +36,7 @@
 
     @testset "Category CRUD" begin
         for et in (:experiments, :items)
-            id = create_category(et; title="jl-cat", color="aaaaaa", default=0)
+            id = create_category(et; title="jl-cat", color="aaaaaa")
             @test id isa Int
 
             cat = get_category(et, id)
@@ -60,7 +60,7 @@
         for et in (:experiments, :items)
             @test list_status(et) isa Vector
 
-            id = create_status(et; title="jl-status", color="123456", default=0)
+            id = create_status(et; title="jl-status", color="123456")
             st = get_status(et, id)
             @test st["title"] == "jl-status"
 

@@ -38,9 +38,9 @@ function MockState()
         Dict{Int, Dict{String, Any}}(),
         Dict{String, Dict{Int, Dict{String, Any}}}(
             "experiments_categories" => Dict(1 => Dict{String, Any}(
-                "id" => 1, "title" => "Default", "color" => "3498db", "is_default" => 1)),
+                "id" => 1, "title" => "Default", "color" => "3498db")),
             "resources_categories" => Dict(1 => Dict{String, Any}(
-                "id" => 1, "title" => "General", "color" => "2ecc71", "is_default" => 1)),
+                "id" => 1, "title" => "General", "color" => "2ecc71")),
             "experiments_status" => Dict{Int, Dict{String, Any}}(),
             "items_status" => Dict{Int, Dict{String, Any}}(),
         ),
@@ -303,7 +303,7 @@ function create_entity!(state::MockState, collection::String, data::Dict)
                 "is_corrosive", "is_explosive", "is_flammable", "is_gas_under_pressure",
                 "is_hazardous2env", "is_hazardous2health", "is_oxidising",
                 "is_radioactive", "is_serious_health_hazard", "is_toxic",
-                "content_type", "item", "state", "userid")
+                "content_type", "items_id", "state", "userid")
         haskey(data, key) && (entity[key] = data[key])
     end
     state.collections[collection][id] = entity
@@ -411,7 +411,7 @@ function route(state::MockState, method::String, rest::Vector{String}, req::HTTP
             item_id = tryparse(Int, rest[2])
             isnothing(item_id) && return not_found()
             data = parse_json_body(req)
-            data["item"] = item_id
+            data["items_id"] = item_id
             id = create_entity!(state, "events", data)
             return created_response("/api/v2/event/$id")
         end
@@ -447,8 +447,8 @@ function route(state::MockState, method::String, rest::Vector{String}, req::HTTP
             entities = collect(values(col))
             state_filter = parse(Int, get(params, "state", "1"))
             entities = filter(e -> get(e, "state", 1) == state_filter, entities)
-            if haskey(params, "cat")
-                cats = Set(parse.(Int, split(params["cat"], ",")))
+            if haskey(params, "category")
+                cats = Set(parse.(Int, split(params["category"], ",")))
                 entities = filter(e -> get(e, "category", nothing) in cats, entities)
             end
             if haskey(params, "owner")
@@ -654,7 +654,6 @@ function route_teams(state::MockState, method::String, rest::Vector{String}, req
                 "id" => id,
                 "title" => name,
                 "color" => String(get(data, "color", "000000")),
-                "is_default" => Int(get(data, "default", 0)),
             )
             state.statuslike[resource][id] = entry
             return created_response("/api/v2/teams/current/$resource/$id")
@@ -687,7 +686,6 @@ function route_teams(state::MockState, method::String, rest::Vector{String}, req
                 data = parse_json_body(req)
                 haskey(data, "title") && (entry["title"] = data["title"])
                 haskey(data, "color") && (entry["color"] = data["color"])
-                haskey(data, "is_default") && (entry["is_default"] = data["is_default"])
                 return json_response(entry)
             elseif method == "DELETE"
                 isnothing(entry) && return not_found()
@@ -773,9 +771,15 @@ function route_storage_units(state::MockState, method::String, rest::Vector{Stri
         elseif method == "PATCH"
             isnothing(unit) && return not_found()
             data = parse_json_body(req)
-            name = String(get(data, "name", ""))
-            isempty(name) && return HTTP.Response(400, "Name must not be empty!")
-            unit["name"] = name
+            isempty(data) && return HTTP.Response(400, "At least one field required")
+            if haskey(data, "name")
+                name = String(data["name"])
+                isempty(name) && return HTTP.Response(400, "Name must not be empty!")
+                unit["name"] = name
+            end
+            if haskey(data, "parent_id")
+                unit["parent_id"] = data["parent_id"]
+            end
             return json_response(storage_unit_view(state, unit))
         elseif method == "DELETE"
             isnothing(unit) && return not_found()
@@ -1083,6 +1087,12 @@ function route_subresource(state::MockState, method::String, entity::Dict, colle
                     u = String(data["qty_unit"])
                     length(u) > 10 && (u = u[1:10])
                     row["qty_unit"] = u
+                end
+                if haskey(data, "storage_id")
+                    new_sid = Int(data["storage_id"])
+                    haskey(state.storage_units, new_sid) ||
+                        return HTTP.Response(400, "storage unit not found")
+                    row["storage_id"] = new_sid
                 end
                 return json_response(container_single_view(row))
             elseif method == "DELETE"

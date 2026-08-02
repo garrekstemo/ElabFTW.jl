@@ -72,16 +72,21 @@ function create_storage_unit(; name::String, parent_id::Union{Int, Nothing}=noth
 end
 
 """
-    rename_storage_unit(id::Int, name::String)
+    rename_storage_unit(id::Int, name::String; parent_id=nothing)
 
-Rename a storage unit. PATCH only supports renaming — re-parenting is not
-accepted by the API. To move a unit, delete it (after emptying children and
-containers) and re-create it under the new parent.
+Rename a storage unit. Optionally pass `parent_id` to move it to a new
+parent at the same time. Pass `parent_id=nothing` (the default) to leave
+the parent unchanged; the server also accepts an explicit `parent_id=null`
+payload to move a unit to the root — use the `elabftw_http` escape hatch
+for that case.
 """
-function rename_storage_unit(id::Int, name::String)
+function rename_storage_unit(id::Int, name::String;
+    parent_id::Union{Int, Nothing}=nothing)
     _check_enabled()
     url = "$(_elabftw_config.url)/api/v2/storage_units/$id"
-    _elabftw_patch(url, Dict{String, Any}("name" => name))
+    payload = Dict{String, Any}("name" => name)
+    isnothing(parent_id) || (payload["parent_id"] = parent_id)
+    _elabftw_patch(url, payload)
     return nothing
 end
 
@@ -200,17 +205,23 @@ function create_container(
 end
 
 """
-    update_container(entity_type, entity_id, container_id; qty_stored=nothing, qty_unit=nothing)
+    update_container(entity_type, entity_id, container_id; qty_stored, qty_unit, storage_id)
 
-Update a container's quantity and/or unit. Only fields you pass are sent;
-a call with no updates is a no-op.
+Update a container's quantity, unit, and/or storage location. Only fields
+you pass are sent; a call with no updates is a no-op.
+
+Pass `storage_id` to move the container to a different storage unit while
+preserving the container row's `id` and `created_at`. Requires write access
+on the parent entity (and `can_manage_inventory_locations` when the instance
+has `inventory_require_edit_rights=1`).
 """
 function update_container(
     entity_type::Symbol,
     entity_id::Int,
     container_id::Int;
     qty_stored::Union{Real, Nothing}=nothing,
-    qty_unit::Union{String, Nothing}=nothing
+    qty_unit::Union{String, Nothing}=nothing,
+    storage_id::Union{Int, Nothing}=nothing,
 )
     _check_enabled()
     etype = String(entity_type)
@@ -218,6 +229,7 @@ function update_container(
     payload = Dict{String, Any}()
     !isnothing(qty_stored) && (payload["qty_stored"] = qty_stored)
     !isnothing(qty_unit) && (payload["qty_unit"] = qty_unit)
+    !isnothing(storage_id) && (payload["storage_id"] = storage_id)
     isempty(payload) && return nothing
     _elabftw_patch(url, payload)
     return nothing

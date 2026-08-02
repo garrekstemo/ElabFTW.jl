@@ -232,7 +232,7 @@ duplicate_experiment(id::Int; copy_files::Bool=false, link_to_original::Bool=tru
 """
     list_experiments(; limit, offset, order, sort,
                      cat, owner, state, status, scope,
-                     related, related_origin) -> Vector{Dict}
+                     related, related_origin, full) -> Vector{Dict}
 
 List experiments from eLabFTW with pagination, sorting, and filtering.
 
@@ -248,6 +248,7 @@ List experiments from eLabFTW with pagination, sorting, and filtering.
 - `scope::Int` — 1 self, 2 team, 3 everything
 - `related::Int` + `related_origin::Symbol` — restrict to items linked to this entity
   (`related_origin` is `:experiments` or `:items`)
+- `full::Int` — `1` returns all columns of each entry; `0` or omitted returns default columns
 
 # Examples
 ```julia
@@ -263,6 +264,9 @@ list_experiments(state=2)
 
 # Experiments linked to item 42
 list_experiments(related=42, related_origin=:items)
+
+# All columns
+list_experiments(full=1)
 ```
 """
 function list_experiments(;
@@ -277,17 +281,18 @@ function list_experiments(;
     scope::Union{Int, Nothing} = nothing,
     related::Union{Int, Nothing} = nothing,
     related_origin::Union{Symbol, Nothing} = nothing,
+    full::Union{Int, Nothing} = nothing,
 )
     return _list_entities("experiments";
         limit=limit, offset=offset, order=order, sort=sort,
         cat=cat, owner=owner, state=state, status=status, scope=scope,
-        related=related, related_origin=related_origin)
+        related=related, related_origin=related_origin, full=full)
 end
 
 """
     search_experiments(; query, tags, limit, offset, order, sort,
                        cat, owner, state, status, scope, extended,
-                       related, related_origin) -> Vector{Dict}
+                       related, related_origin, full) -> Vector{Dict}
 
 Search experiments in eLabFTW by text query, tags, and other filters.
 
@@ -320,11 +325,12 @@ function search_experiments(;
     extended::Union{String, Nothing} = nothing,
     related::Union{Int, Nothing} = nothing,
     related_origin::Union{Symbol, Nothing} = nothing,
+    full::Union{Int, Nothing} = nothing,
 )
     return _list_entities("experiments";
         query=query, tags=tags, limit=limit, offset=offset, order=order, sort=sort,
         cat=cat, owner=owner, state=state, status=status, scope=scope,
-        extended=extended, related=related, related_origin=related_origin)
+        extended=extended, related=related, related_origin=related_origin, full=full)
 end
 
 # Experiment sub-resources: uploads, steps

@@ -21,7 +21,7 @@ end
 """
     search_extra_fields_keys(; q="", limit=0) -> Vector{Dict}
 
-Autocomplete for `extra_fields` metadata keys in use across the team.
+Autocomplete for custom fields metadata keys in use across the team.
 Results are sorted by frequency (most-used first) — useful for building
 form UIs or checking if a key name is already conventional.
 

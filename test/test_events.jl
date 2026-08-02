@@ -12,7 +12,7 @@
     @test evt["title"] == "FTIR session"
     @test evt["start"] == "2026-03-01 09:00:00"
     @test evt["end"] == "2026-03-01 12:00:00"
-    @test evt["item"] == item_id
+    @test evt["items_id"] == item_id
 
     update_event(id; title="Updated session")
     @test get_event(id)["title"] == "Updated session"
