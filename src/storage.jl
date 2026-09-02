@@ -72,6 +72,38 @@ function create_storage_unit(; name::String, parent_id::Union{Int, Nothing}=noth
 end
 
 """
+    update_storage_unit(id::Int; name=nothing, parent_id=nothing)
+
+Update a storage unit's name and/or parent. At least one field must be provided.
+
+# Arguments
+- `name::String` — New name for the storage unit.
+- `parent_id::Int` — New parent unit ID. Cannot be the unit itself or any
+  of its descendants.
+
+# Example
+```julia
+update_storage_unit(5; name="Freezer B")
+update_storage_unit(5; parent_id=2)
+update_storage_unit(5; name="Freezer B", parent_id=2)
+```
+"""
+function update_storage_unit(id::Int;
+    name::Union{String, Nothing}=nothing,
+    parent_id::Union{Int, Nothing}=nothing,
+)
+    _check_enabled()
+    all(isnothing, (name, parent_id)) &&
+        throw(ArgumentError("update_storage_unit: specify at least one of name, parent_id"))
+    url = "$(_elabftw_config.url)/api/v2/storage_units/$id"
+    payload = Dict{String, Any}()
+    isnothing(name) || (payload["name"] = name)
+    isnothing(parent_id) || (payload["parent_id"] = parent_id)
+    _elabftw_patch(url, payload)
+    return nothing
+end
+
+"""
     rename_storage_unit(id::Int, name::String; parent_id=nothing)
 
 Rename a storage unit. Optionally pass `parent_id` to move it to a new
@@ -205,6 +237,7 @@ function create_container(
 end
 
 """
+<<<<<<< HEAD
     update_container(entity_type, entity_id, container_id; qty_stored, qty_unit, storage_id)
 
 Update a container's quantity, unit, and/or storage location. Only fields
@@ -214,6 +247,13 @@ Pass `storage_id` to move the container to a different storage unit while
 preserving the container row's `id` and `created_at`. Requires write access
 on the parent entity (and `can_manage_inventory_locations` when the instance
 has `inventory_require_edit_rights=1`).
+=======
+    update_container(entity_type, entity_id, container_id; qty_stored=nothing, qty_unit=nothing, storage_id=nothing)
+
+Update a container's quantity, unit, and/or storage location. Only fields you
+pass are sent; a call with no updates is a no-op. Setting `storage_id` moves
+the container to a different storage unit while preserving its `id`.
+>>>>>>> 46509e1 (Sync eLabFTW API 5.6.11)
 """
 function update_container(
     entity_type::Symbol,

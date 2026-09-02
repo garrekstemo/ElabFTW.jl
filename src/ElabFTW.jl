@@ -172,7 +172,7 @@ export link_compound, list_compound_links
 
 # Storage units and containers
 export list_storage_units, get_storage_unit, create_storage_unit
-export rename_storage_unit, delete_storage_unit
+export update_storage_unit, rename_storage_unit, delete_storage_unit
 export list_containers, get_container, create_container
 export update_container, delete_container
 
@@ -180,7 +180,7 @@ export update_container, delete_container
 export list_revisions, get_revision, restore_revision
 
 # Utility
-export instance_info
+export instance_info, post_instance_action
 export list_favorite_tags, add_favorite_tag, remove_favorite_tag
 export import_file, create_export, download_export
 export search_extra_fields_keys

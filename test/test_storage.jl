@@ -20,6 +20,14 @@
         @test get_storage_unit(freezer)["name"] == "Freezer A (cold room)"
         @test get_storage_unit(drawer)["full_path"] == "Freezer A (cold room) > Drawer 1"
 
+        update_storage_unit(freezer; name="Freezer A2")
+        @test get_storage_unit(freezer)["name"] == "Freezer A2"
+
+        update_storage_unit(drawer; parent_id=freezer)
+        @test get_storage_unit(drawer)["parent_id"] == freezer
+
+        @test_throws ArgumentError update_storage_unit(freezer)
+
         tree = list_storage_units(hierarchy=true)
         @test any(u -> u["id"] == freezer && u["children_count"] == 1, tree)
         @test any(u -> u["id"] == drawer && u["children_count"] == 0, tree)

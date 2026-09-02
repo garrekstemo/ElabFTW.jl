@@ -383,6 +383,15 @@ function route(state::MockState, method::String, rest::Vector{String}, req::HTTP
         return created_response("/api/v2/experiments/$id")
     end
 
+    # /api/v2/instance
+    if n == 1 && rest[1] == "instance" && method == "POST"
+        data = parse_json_body(req)
+        action = get(data, "action", "")
+        isempty(action) && return HTTP.Response(400, "action required")
+        id = new_id!(state)
+        return created_response("/api/v2/instance/$id")
+    end
+
     # /api/v2/favtags[/{id}]
     if n >= 1 && rest[1] == "favtags"
         return route_favtags(state, method, rest[2:end], req)
