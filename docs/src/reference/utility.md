@@ -6,6 +6,7 @@ Instance information, favorite tags, and import/export.
 
 ```@docs
 instance_info
+post_instance_action
 ```
 
 ## Extra Fields Keys

@@ -13,6 +13,7 @@ Track physical storage locations for inventory items. Two concepts:
 list_storage_units
 get_storage_unit
 create_storage_unit
+update_storage_unit
 rename_storage_unit
 delete_storage_unit
 ```
