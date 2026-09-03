@@ -6,6 +6,40 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-09-03
+
+Syncs the client to eLabFTW API v2 5.6.11 (from 5.5.12).
+
+### Removed
+
+- **Breaking:** the `default` keyword of `create_category`, `create_status`,
+  `update_category`, and `update_status`. eLabFTW 5.6 dropped the `default`
+  field from category/status create bodies and `is_default` from the update
+  body and response schema. Callers that passed `default` must drop it.
+
+### Added
+
+- `full` keyword (`0`/`1`) on `list_experiments`, `search_experiments`,
+  `list_items`, and `search_items`; pass `full=1` to return every column.
+- `update_storage_unit(id; name, parent_id)` for renaming and/or reparenting a
+  storage unit in place. `rename_storage_unit` gains an optional `parent_id`
+  keyword.
+- `storage_id` keyword on `update_container` to move a container to a
+  different storage unit.
+- `post_instance_action(action; kwargs...)` wrapping the new sysadmin
+  `POST /instance` endpoint (`allowuntrusted`, `clearlockedoutdevices`, `test`,
+  `email`, `emailbookers`, `emailteam`).
+- The new entity PATCH fields `bodyappend` and `metadatamerge`, and the
+  `booking_hourly_rate_*` item fields, pass through the existing `kwargs...` of
+  `update_experiment` and `update_item`; no dedicated wrappers.
+
+### Changed
+
+- The `cat` keyword on list/search calls now sends `category=` on the wire
+  (renamed upstream); the Julia keyword name is unchanged.
+- Upstream API snapshot bumped to 5.6.11.
+- README installation section no longer claims the package is unregistered.
+
 ## [0.2.1] - 2026-07-13
 
 ### Changed

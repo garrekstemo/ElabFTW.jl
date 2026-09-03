@@ -14,7 +14,7 @@ using Pkg
 Pkg.add("ElabFTW")
 ```
 
-Until the package is registered in the General registry, install from GitHub:
+To track the development version instead of the latest release:
 
 ```julia
 Pkg.add(url="https://github.com/garrekstemo/ElabFTW.jl")
