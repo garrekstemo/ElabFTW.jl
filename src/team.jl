@@ -113,11 +113,11 @@ function _statuslike_path(kind::Symbol, entity_type::Symbol)
 end
 
 function _statuslike_create(kind::Symbol, entity_type::Symbol, title::String,
-                            color::String, default::Int)
+                            color::String)
     _check_enabled()
     url = _statuslike_path(kind, entity_type)
     # POST uses `name`; GET/PATCH use `title`. Translate.
-    payload = Dict{String, Any}("name" => title, "default" => default)
+    payload = Dict{String, Any}("name" => title)
     # Server rejects empty `color` with HTTP 400, so only send when given.
     isempty(color) || (payload["color"] = color)
     response = _elabftw_post(url, payload)
@@ -133,16 +133,14 @@ end
 
 function _statuslike_update(kind::Symbol, entity_type::Symbol, id::Int;
                             title::Union{String, Nothing}=nothing,
-                            color::Union{String, Nothing}=nothing,
-                            default::Union{Int, Nothing}=nothing)
+                            color::Union{String, Nothing}=nothing)
     _check_enabled()
-    all(isnothing, (title, color, default)) &&
-        throw(ArgumentError("update_*: specify at least one of title, color, default"))
+    all(isnothing, (title, color)) &&
+        throw(ArgumentError("update_*: specify at least one of title, color"))
     url = "$(_statuslike_path(kind, entity_type))/$id"
     payload = Dict{String, Any}()
     isnothing(title) || (payload["title"] = title)
     isnothing(color) || (payload["color"] = color)
-    isnothing(default) || (payload["is_default"] = default)
     response = _elabftw_patch(url, payload)
     return JSON.parse(String(response.body))
 end
@@ -155,7 +153,7 @@ function _statuslike_delete(kind::Symbol, entity_type::Symbol, id::Int)
 end
 
 """
-    create_category(entity_type::Symbol; title, color="", default=0) -> Int
+    create_category(entity_type::Symbol; title, color="") -> Int
 
 Create a new category. `entity_type` is `:experiments` or `:items`.
 Returns the new category ID.
@@ -163,7 +161,6 @@ Returns the new category ID.
 # Arguments
 - `title::String` — Category name
 - `color::String` — 6-char hex (no leading `#`), e.g. `"2ecc71"`
-- `default::Int` — `1` makes this the team's default, `0` otherwise
 
 # Example
 ```julia
@@ -173,9 +170,8 @@ create_category(:experiments; title="Draft", color="999999")
 # Throws
 - `ArgumentError` — `entity_type` is not `:experiments` or `:items`.
 """
-create_category(entity_type::Symbol; title::String, color::String="",
-                default::Int=0) =
-    _statuslike_create(:category, entity_type, title, color, default)
+create_category(entity_type::Symbol; title::String, color::String="") =
+    _statuslike_create(:category, entity_type, title, color)
 
 """
     get_category(entity_type::Symbol, id::Int) -> Dict
@@ -186,20 +182,18 @@ get_category(entity_type::Symbol, id::Int) =
     _statuslike_get(:category, entity_type, id)
 
 """
-    update_category(entity_type::Symbol, id::Int; title=nothing, color=nothing, default=nothing) -> Dict
+    update_category(entity_type::Symbol, id::Int; title=nothing, color=nothing) -> Dict
 
-Update a category's title, color, and/or default flag. At least one
-field must be provided. Returns the updated category.
+Update a category's title and/or color. At least one field must be provided.
+Returns the updated category.
 
 # Throws
 - `ArgumentError` — no fields provided, or `entity_type` invalid.
 """
 update_category(entity_type::Symbol, id::Int;
                 title::Union{String, Nothing}=nothing,
-                color::Union{String, Nothing}=nothing,
-                default::Union{Int, Nothing}=nothing) =
-    _statuslike_update(:category, entity_type, id;
-        title=title, color=color, default=default)
+                color::Union{String, Nothing}=nothing) =
+    _statuslike_update(:category, entity_type, id; title=title, color=color)
 
 """
     delete_category(entity_type::Symbol, id::Int)
@@ -225,13 +219,12 @@ function list_status(entity_type::Symbol)
 end
 
 """
-    create_status(entity_type::Symbol; title, color="", default=0) -> Int
+    create_status(entity_type::Symbol; title, color="") -> Int
 
 Create a new status. See [`create_category`](@ref) for argument semantics.
 """
-create_status(entity_type::Symbol; title::String, color::String="",
-              default::Int=0) =
-    _statuslike_create(:status, entity_type, title, color, default)
+create_status(entity_type::Symbol; title::String, color::String="") =
+    _statuslike_create(:status, entity_type, title, color)
 
 """
     get_status(entity_type::Symbol, id::Int) -> Dict
@@ -242,16 +235,14 @@ get_status(entity_type::Symbol, id::Int) =
     _statuslike_get(:status, entity_type, id)
 
 """
-    update_status(entity_type::Symbol, id::Int; title=nothing, color=nothing, default=nothing) -> Dict
+    update_status(entity_type::Symbol, id::Int; title=nothing, color=nothing) -> Dict
 
 Update a status. See [`update_category`](@ref) for argument semantics.
 """
 update_status(entity_type::Symbol, id::Int;
               title::Union{String, Nothing}=nothing,
-              color::Union{String, Nothing}=nothing,
-              default::Union{Int, Nothing}=nothing) =
-    _statuslike_update(:status, entity_type, id;
-        title=title, color=color, default=default)
+              color::Union{String, Nothing}=nothing) =
+    _statuslike_update(:status, entity_type, id; title=title, color=color)
 
 """
     delete_status(entity_type::Symbol, id::Int)

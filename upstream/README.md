@@ -16,7 +16,7 @@ sync.
 - **Source repository:** <https://github.com/elabftw/elabftw>
 - **Path in source:** `apidoc/v2/openapi.yaml`
 - **Fetched from release:** the tag recorded in [`.spec-version`](.spec-version)
-  (currently eLabFTW `5.5.12`)
+  (currently eLabFTW `5.6.11`)
 - **License:** [GNU AGPL-3.0](https://www.gnu.org/licenses/agpl-3.0.html), the
   license of the eLabFTW project — **not** the MIT license that covers the
   Julia code in this package.

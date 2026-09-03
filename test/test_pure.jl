@@ -167,6 +167,7 @@ end
 
     @testset "Utility guards" begin
         @test_throws NotConfiguredError instance_info()
+        @test_throws NotConfiguredError post_instance_action("allowuntrusted")
         @test_throws NotConfiguredError list_favorite_tags()
         @test_throws NotConfiguredError add_favorite_tag("alpha")
         @test_throws NotConfiguredError remove_favorite_tag(1)

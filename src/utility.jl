@@ -21,7 +21,7 @@ end
 """
     search_extra_fields_keys(; q="", limit=0) -> Vector{Dict}
 
-Autocomplete for `extra_fields` metadata keys in use across the team.
+Autocomplete for custom fields metadata keys in use across the team.
 Results are sorted by frequency (most-used first) — useful for building
 form UIs or checking if a key name is already conventional.
 
@@ -186,4 +186,48 @@ function download_export(entity_type::Symbol, id::Int, filepath::String; format:
     write(filepath, data)
     @info "Exported" entity_type id filepath
     return filepath
+end
+
+"""
+    post_instance_action(action::String; kwargs...) -> Union{Int, Nothing}
+
+Run a sysadmin-level instance action via `POST /instance`. Returns the integer
+from the `Location` header on success, or `nothing` when the server returns no
+location (e.g. `clearlockedoutdevices`).
+
+Supported `action` values and required extra keyword arguments:
+
+| action                | extra kwargs                             |
+|:----------------------|:-----------------------------------------|
+| `"allowuntrusted"`    | —                                        |
+| `"clearlockedoutdevices"` | —                                    |
+| `"test"`              | `email::String`                          |
+| `"email"`             | `target::String`, `subject::String`, `body::String` |
+| `"emailbookers"`      | `entity_id::Int`, `subject::String`, `body::String` |
+| `"emailteam"`         | `target::String`, `subject::String`, `body::String` |
+
+Requires Sysadmin permissions for most actions.
+
+# Example
+```julia
+post_instance_action("test"; email="sysadmin@example.org")
+post_instance_action("email";
+    target="active_users",
+    subject="Planned maintenance",
+    body="The instance will be unavailable tonight.")
+```
+"""
+function post_instance_action(action::String; kwargs...)
+    _check_enabled()
+    url = "$(_elabftw_config.url)/api/v2/instance"
+    payload = Dict{String, Any}("action" => action)
+    for (k, v) in kwargs
+        payload[String(k)] = v
+    end
+    response = _elabftw_post(url, payload)
+    loc = HTTP.header(response, "Location", "")
+    isempty(loc) && return nothing
+    m = match(r"/(\d+)$", loc)
+    isnothing(m) && return nothing
+    return parse(Int, m.captures[1])
 end

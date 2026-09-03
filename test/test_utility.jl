@@ -116,6 +116,14 @@
         delete_experiment(id)
     end
 
+    @testset "post_instance_action" begin
+        result = post_instance_action("allowuntrusted")
+        @test result isa Int
+
+        result2 = post_instance_action("test"; email="admin@example.org")
+        @test result2 isa Int
+    end
+
     @testset "search_extra_fields_keys" begin
         # Seed the mock state directly — the server auto-populates this from
         # real entity metadata, which the mock doesn't track.

@@ -118,7 +118,7 @@ end
 """
     _list_entities(entity_type; limit, offset, order, sort, query, tags,
                    cat, owner, state, status, scope, extended,
-                   related, related_origin) -> Vector{Dict}
+                   related, related_origin, full) -> Vector{Dict}
 
 List entities with pagination, sorting, and optional filtering.
 """
@@ -137,6 +137,7 @@ function _list_entities(entity_type::String;
     extended::Union{String, Nothing} = nothing,
     related::Union{Int, Nothing} = nothing,
     related_origin::Union{Symbol, Nothing} = nothing,
+    full::Union{Int, Nothing} = nothing,
 )
     _check_enabled()
 
@@ -154,7 +155,7 @@ function _list_entities(entity_type::String;
         push!(params, "tags[]=$(HTTP.escapeuri(tag))")
     end
     if !isnothing(cat)
-        push!(params, "cat=" * _csv_ints(cat))
+        push!(params, "category=" * _csv_ints(cat))
     end
     if !isnothing(owner)
         push!(params, "owner=" * _csv_ints(owner))
@@ -176,6 +177,9 @@ function _list_entities(entity_type::String;
     end
     if !isnothing(related_origin)
         push!(params, "related_origin=$(String(related_origin))")
+    end
+    if !isnothing(full)
+        push!(params, "full=$full")
     end
 
     url = "$(_elabftw_config.url)/api/v2/$entity_type?" * join(params, "&")

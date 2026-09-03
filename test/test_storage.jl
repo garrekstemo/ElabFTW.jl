@@ -20,13 +20,26 @@
         @test get_storage_unit(freezer)["name"] == "Freezer A (cold room)"
         @test get_storage_unit(drawer)["full_path"] == "Freezer A (cold room) > Drawer 1"
 
+        update_storage_unit(freezer; name="Freezer A2")
+        @test get_storage_unit(freezer)["name"] == "Freezer A2"
+
+        update_storage_unit(drawer; parent_id=freezer)
+        @test get_storage_unit(drawer)["parent_id"] == freezer
+
+        @test_throws ArgumentError update_storage_unit(freezer)
+
         tree = list_storage_units(hierarchy=true)
         @test any(u -> u["id"] == freezer && u["children_count"] == 1, tree)
         @test any(u -> u["id"] == drawer && u["children_count"] == 0, tree)
 
+        shelf = create_storage_unit(name="Shelf 1")
+        rename_storage_unit(shelf, "Shelf 1", parent_id=freezer)
+        @test get_storage_unit(shelf)["parent_id"] == freezer
+
         @test_throws ClientError delete_storage_unit(freezer)
 
         delete_storage_unit(drawer)
+        delete_storage_unit(shelf)
         delete_storage_unit(freezer)
         @test_throws NotFoundError get_storage_unit(freezer)
     end
@@ -56,12 +69,17 @@
         @test row["qty_stored"] == "25"
         @test row["qty_unit"] == "g"
 
+        unit_id2 = create_storage_unit(name="Box B")
+        update_container(:items, item_id, cid; storage_id=unit_id2)
+        @test get_container(:items, item_id, cid)["storage_id"] == unit_id2
+
         update_container(:items, item_id, cid)
 
         delete_container(:items, item_id, cid)
         @test isempty(list_containers(:items, item_id))
 
         delete_storage_unit(unit_id)
+        delete_storage_unit(unit_id2)
         delete_item(item_id)
     end
 

@@ -69,7 +69,7 @@ components:
           value: experiments
 
     Category:
-      name: cat
+      name: category
       in: query
       schema:
         type: string
@@ -197,6 +197,16 @@ components:
           value: "2,3"
       description: |
         Filter results based on their state: 1 (Normal), 2 (Archived), 3 (Deleted). Supports comma separated values.
+
+    Full:
+      name: full
+      in: query
+      schema:
+        type: integer
+        enum: [0, 1]
+      description: |
+        Return all columns of each entry when set to 1.
+
   # end query parameters for entity
 
   requestBodies:
@@ -1249,6 +1259,9 @@ components:
           description: The main text content (HTML or Markdown)
           default: null
           example: "<h1>Section title</h1><p>Main text of resource</p>"
+        bodyappend:
+          type: string
+          description: Append content to the existing entity body instead of replacing it.
         canread_base:
           type: number
           nullable: true
@@ -1310,6 +1323,19 @@ components:
           nullable: true
         metadata:
           $ref: '#/components/schemas/metadata'
+        metadatamerge:
+          description: >
+            Merge incoming metadata into the existing entity metadata.
+            Existing extra fields keep their schema such as type, options, units and description;
+            only their value is updated. Incoming extra fields that do not already exist are added.
+          allOf:
+            - $ref: '#/components/schemas/metadata'
+          example:
+            extra_fields:
+              weight:
+                value: "12"
+              certified:
+                value: "X"
         rating:
           type: integer
           nullable: true
@@ -1370,38 +1396,96 @@ components:
     event:
       type: object
       properties:
+        id:
+          type: integer
+          example: 13
+        team:
+          type: integer
+          example: 1
+        team_name:
+          type: string
+          example: 'Alpha'
         title:
           type: string
           description: Optional comment added to the event
-        id:
+          example: '[pET-32a(+)] Afternoon experiment. (Titi Koelpin)'
+        title_only:
+          type: string
+          description: Title of the event.
+          nullable: true
+          example: 'Afternoon experiment'
+        book_cancel_minutes:
           type: integer
-        item:
+          nullable: true
+          description: Minutes before start when cancellation is allowed
+        book_is_cancellable:
           type: integer
-          description: ID of the Resource being booked
-          example: 12
+          description: Whether the booking can be cancelled (1 = yes, 0 = no)
+          example: 1
+        canbook:
+          type: integer
+          description: Whether the event is bookable (1 = yes, 0 = no)
+          example: 1
+        created_at:
+          type: string
+          format: date-time
+          example: '2026-03-02 16:14:14'
+        modified_at:
+          type: string
+          format: date-time
+          example: '2026-03-02 16:29:27'
         start:
           type: string
-          example: "2026-01-20 12:00:00"
+          format: date-time
+          example: '2026-03-04 17:30:00'
         end:
           type: string
-          example: "2026-01-20 14:00:00"
+          format: date-time
+          example: '2026-03-04 20:00:00'
+        event_duration_minutes:
+          type: integer
+          example: 150
         userid:
           type: integer
-        item_title:
-          type: string
-          description: Title of the Resource being booked
-        color:
-          type: string
+          example: 2
         fullname:
           type: string
-        item_link:
-          type: integer
-        item_link_title:
-          type: string
+          description: Full name of the user who created the event.
+          example: 'Titi Koelpin'
         experiment:
           type: integer
+          nullable: true
+          example: 20
         experiment_title:
           type: string
+          description: The experiment that has been bound to the event.
+          nullable: true
+          example: 'Effect of temperature on enzyme activity'
+        items_id:
+          type: integer
+          description: ID of the Resource being booked
+          example: 124
+        item_title:
+          type: string
+          example: 'pET-32a(+)'
+        items_category:
+          type: integer
+          nullable: true
+        items_category_title:
+          type: string
+          nullable: true
+        item_link:
+          type: integer
+          nullable: true
+          example: 132
+        item_link_title:
+          type: string
+          description: The item that has been bound to the event.
+          nullable: true
+          example: 'HEK293T'
+        color:
+          type: string
+          nullable: true
     experiment:
       allOf:
         - $ref: '#/components/schemas/entity'
@@ -1603,14 +1687,19 @@ components:
           type: integer
         email_attr:
           type: string
-        team_attr:
-          type: string
         fname_attr:
           type: string
         lname_attr:
           type: string
+        team_attr:
+          type: string
+          nullable: true
         orgid_attr:
           type: string
+          nullable: true
+        orcid_attr:
+          type: string
+          nullable: true
         source:
           type: int
           nullable: true
@@ -1675,6 +1764,30 @@ components:
         booking_window_days:
           type: integer
           description: How many days in advance users can book an item. 0 means no limit.
+        booking_hourly_rate_notax:
+          type: number
+          description: The hourly rate of booked resource, without taxes.
+          minimum: 0
+        booking_hourly_rate_tax:
+          type: number
+          description: The hourly rate of booked resource, with taxes.
+          minimum: 0
+        booking_hourly_rate_currency:
+          type: integer
+          description: |
+            The currency of the hourly rate:
+              - 0: CAD
+              - 1: CHF
+              - 2: CNY
+              - 3: DKK
+              - 4: EUR
+              - 5: GBP
+              - 6: JPY
+              - 7: USD
+              - 8: SEK
+              - 9: NOK
+          example: 0
+          enum: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
 
     item:
       allOf:
@@ -1720,7 +1833,7 @@ components:
     metadata:
       type: object
       nullable: true
-      description: The metadata is a JSON type attribute that is mainly used to hold the extra fields, but it can hold anything you want
+      description: The metadata is a JSON type attribute that is mainly used to hold the custom fields, but it can hold anything you want
       properties:
         elabftw:
           type: object
@@ -1729,7 +1842,7 @@ components:
             extra_fields_groups:
               type: array
               nullable: true
-              description: This array stores the extra fields groups
+              description: This array stores the custom fields groups
               default: []
               items:
                 type: object
@@ -1805,8 +1918,6 @@ components:
           type: string
         color:
           type: string
-        is_default:
-          type: integer
     step:
       type: object
       properties:
@@ -1879,6 +1990,12 @@ components:
           type: integer
         force_exp_tpl:
           type: integer
+          default: 0
+          description: Binary toggle to force usage of templates.
+        force_res_tpl:
+          type: integer
+          default: 0
+          description: Binary toggle to force usage of templates.
         created_at:
           type: string
         orgid:
@@ -2174,6 +2291,7 @@ x-parameterGroups:
     - $ref: '#/components/parameters/Order'
     - $ref: '#/components/parameters/Sort'
     - $ref: '#/components/parameters/State'
+    - $ref: '#/components/parameters/Full'
 
 security:
   - token:
@@ -2293,7 +2411,10 @@ paths:
     patch:
       tags: ['Containers']
       summary: Modify a container.
-      description: Update the quantity stored or the unit of a container.
+      description: |
+        Update the quantity stored, the unit, or the storage location of a
+        container. Setting `storage_id` moves the container to a different
+        storage unit while preserving its `id` and `created_at`.
       operationId: patch-container
       requestBody:
         description: Parameters for modifying a container.
@@ -2310,6 +2431,14 @@ paths:
                   type: string
                   description: New unit of the quantity.
                   example: "g"
+                storage_id:
+                  type: integer
+                  description: |
+                    New storage unit id. Moves the container to that storage
+                    unit. Requires write access on the parent entity and (when
+                    `inventory_require_edit_rights=1`) the
+                    `can_manage_inventory_locations` permission.
+                  example: 12
       responses:
         '200':
           description: The updated container.
@@ -2652,7 +2781,11 @@ paths:
     patch:
       tags: ['Storage units']
       summary: Modify a storage unit.
-      description: Update the name of a storage unit. Requires permission to manage inventory locations.
+      description: |
+        Update the name and/or the parent of a storage unit. Setting
+        `parent_id` reparents the unit (and everything under it) in place.
+        Pass `parent_id: null` to move the unit to the root. Requires
+        permission to manage inventory locations.
       operationId: patch-storage-unit
       requestBody:
         description: Parameters for modifying a storage unit.
@@ -2660,12 +2793,19 @@ paths:
           application/json:
             schema:
               type: object
-              required: ['name']
+              minProperties: 1
               properties:
                 name:
                   type: string
                   description: New name for the storage unit.
                   example: "Freezer B"
+                parent_id:
+                  type: integer
+                  nullable: true
+                  description: |
+                    New parent storage unit id, or `null` to move to the root.
+                    Cannot be the unit itself or any of its descendants.
+                  example: 5
       responses:
         '200':
           description: The updated storage unit.
@@ -3246,6 +3386,228 @@ paths:
                               example: 10
         '401':
           $ref: '#/components/responses/Unauthorized'
+
+  # INSTANCE
+  /instance:
+    summary: Instance level actions
+    post:
+      tags: ['Instance']
+      summary: Run an instance level action.
+      operationId: post-instance
+      requestBody:
+        description: Parameters for the instance action.
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: object
+                  required: ['action']
+                  properties:
+                    action:
+                      type: string
+                      enum: ['allowuntrusted']
+                      description: Allow all untrusted devices to access locked down user accounts. Requires Sysadmin permissions.
+                - type: object
+                  required: ['action']
+                  properties:
+                    action:
+                      type: string
+                      enum: ['clearlockedoutdevices']
+                      description: Clear all locked out devices. Requires Sysadmin permissions.
+                - type: object
+                  required: ['action', 'email']
+                  properties:
+                    action:
+                      type: string
+                      enum: ['test']
+                      description: Send a test email. Requires Sysadmin permissions.
+                    email:
+                      type: string
+                      format: email
+                      description: Email address that will receive the test email.
+                      example: sysadmin@example.org
+                - type: object
+                  required: ['action', 'target', 'subject', 'body']
+                  properties:
+                    action:
+                      type: string
+                      enum: ['email']
+                      description: Send a mass email to instance users. Requires Sysadmin permissions.
+                    target:
+                      type: string
+                      enum: ['active_users', 'admins', 'sysadmins']
+                      description: Target recipients.
+                    subject:
+                      type: string
+                      description: Email subject.
+                      example: Planned maintenance
+                    body:
+                      type: string
+                      description: Email body.
+                      example: The instance will be unavailable tonight.
+                - type: object
+                  required: ['action', 'entity_id', 'subject', 'body']
+                  properties:
+                    action:
+                      type: string
+                      enum: ['emailbookers']
+                      description: Email users who booked the item.
+                    entity_id:
+                      type: integer
+                      description: ID of the bookable item.
+                      example: 12
+                    subject:
+                      type: string
+                      description: Email subject.
+                      example: Booking update
+                    body:
+                      type: string
+                      description: Email body.
+                      example: The booked item will be unavailable tomorrow.
+                - type: object
+                  required: ['action', 'target', 'subject', 'body']
+                  properties:
+                    action:
+                      type: string
+                      enum: ['emailteam']
+                      description: Email the current team or one of its teamgroups.
+                    target:
+                      type: string
+                      description: Target recipients. Use "team" for the current team or "teamgroup_{id}" for a teamgroup.
+                      example: teamgroup_4
+                      pattern: '^(team|teamgroup_[0-9]+)$'
+                    subject:
+                      type: string
+                      description: Email subject.
+                      example: Team update
+                    body:
+                      type: string
+                      description: Email body.
+                      example: Please read the latest team announcement.
+      responses:
+        '201':
+          description: The action was successful.
+          headers:
+            location:
+              description: An URL ending with the integer returned by the action.
+              schema:
+                type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+
+  # INSTANCE BRANDING
+  /instance/branding/{id}:
+    summary: Instance branding
+    parameters:
+      - name: id
+        in: path
+        description: Branding id.
+        required: true
+        schema:
+          type: integer
+          enum: [1, 2, 3, 4]
+    get:
+      tags: ['Branding']
+      summary: Read a branding asset as a binary file.
+      operationId: get-instance-branding
+      parameters:
+        - name: format
+          in: query
+          description: Use binary format to retrieve the branding asset.
+          required: true
+          schema:
+            type: string
+            enum: ['binary']
+      responses:
+        '200':
+          description: The branding asset binary file.
+          headers:
+            Content-Length:
+              description: Size of the branding asset in bytes.
+              schema:
+                type: integer
+            Cache-Control:
+              description: Cache policy for the branding asset.
+              schema:
+                type: string
+            ETag:
+              description: Entity tag used for cache revalidation.
+              schema:
+                type: string
+          content:
+            image/svg+xml:
+              schema:
+                type: string
+                format: binary
+            image/png:
+              schema:
+                type: string
+                format: binary
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+            image/webp:
+              schema:
+                type: string
+                format: binary
+            image/x-icon:
+              schema:
+                type: string
+                format: binary
+            image/vnd.microsoft.icon:
+              schema:
+                type: string
+                format: binary
+        '304':
+          description: The branding asset has not changed.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+    post:
+      tags: ['Branding']
+      summary: Update a branding asset.
+      operationId: post-instance-branding
+      requestBody:
+        required: true
+        description: Parameters for updating a branding asset.
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: ['file']
+              properties:
+                action:
+                  type: string
+                  enum: ['update']
+                  description: Update a branding asset. Requires Sysadmin permissions.
+                  default: update
+                file:
+                  type: string
+                  format: binary
+                  description: Branding file. Accepted types are SVG, PNG, JPEG, WebP and ICO. Maximum size is 1 MiB.
+            encoding:
+              file:
+                contentType: image/svg+xml, image/png, image/jpeg, image/webp, image/x-icon, image/vnd.microsoft.icon
+      responses:
+        '201':
+          description: The branding asset has been updated.
+          headers:
+            location:
+              description: An URL to the branding asset that was updated
+              schema:
+                type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+           $ref: '#/components/responses/Forbidden'
 
   # ITEMS
   /items:
@@ -4408,12 +4770,17 @@ paths:
                   type: string
                   description: A name for this booking slot.
                   default: Untitled
+                  example: 'This is an event.'
                 start:
                   type: string
-                  description: A starting date-time in ISO 8601 format.
+                  format: date-time
+                  description: ISO 8601 date-time with timezone offset.
+                  example: '2026-03-15T13:30:00+01:00'
                 end:
                   type: string
-                  description: An end date-time in ISO 8601 format.
+                  format: date-time
+                  description: ISO 8601 date-time with timezone offset.
+                  example: '2026-03-15T15:30:00+01:00'
       responses:
         '201':
           description: The booking slot has been created.
@@ -4468,6 +4835,7 @@ paths:
                   properties:
                     target:
                       type: string
+                      nullable: true
                       enum: ['datetime']
                     start:
                       type: string
@@ -4976,9 +5344,6 @@ paths:
                   type: string
                   description: |
                     Hex color without leading \#.
-                default:
-                  type: integer
-                  description: Is it the default category for the team?
       responses:
         '201':
           description: Create a category.
@@ -5101,9 +5466,6 @@ paths:
                   type: string
                   description: |
                     Hex color without leading \#.
-                default:
-                  type: integer
-                  description: Is it the default category for the team?
       responses:
         '201':
           description: Create a resource category.
@@ -5226,9 +5588,6 @@ paths:
                   type: string
                   description: |
                     Hex color without leading \#.
-                default:
-                  type: integer
-                  description: Is it the default status for the team?
       responses:
         '201':
           description: New experiments status created.
@@ -5349,9 +5708,6 @@ paths:
                   type: string
                   description: |
                     Hex color without leading \#.
-                default:
-                  type: integer
-                  description: Is it the default status for the team?
       responses:
         '201':
           description: New resources status created.
@@ -5445,13 +5801,22 @@ paths:
       operationId: read-team-teamgroups
       responses:
         '200':
-          description: A list of teamgroups for the team.
+          description: Teamgroups for the team, keyed by teamgroup ID.
           content:
             application/json:
               schema:
-                type: array
-                items:
+                type: object
+                additionalProperties:
                   $ref: '#/components/schemas/teamgroup'
+                example:
+                  "1":
+                    id: 1
+                    name: Super secret project
+                    users: [ ]
+                  "2":
+                    id: 2
+                    name: Advanced microscopy users
+                    users: [ ]
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404':
@@ -5882,7 +6247,7 @@ paths:
               oneOf:
                 - $ref: '#/components/schemas/users'
                 - type: object
-                  description: Archive or validate a user (will toggle the attribute)
+                  description: Archive or validate a user (will toggle the attribute). Archive will archive user in all teams and requires Sysadmin rights.
                   properties:
                     action:
                       type: string
@@ -5929,11 +6294,12 @@ paths:
                       description: Target userid
                     target:
                       type: string
-                      enum: ['group', 'is_owner']
+                      enum: ['is_admin', 'is_owner', 'is_archived']
                       description: The attribute to modify
                     content:
                       type: integer
-                      description: Binary value for `is_owner`, integer for `group` (2 for Admin, 4 for User)
+                      enum: [0, 1]
+                      description: Binary value for the target attributes.
       responses:
         '200':
           description: Public properties of a user.
@@ -6122,9 +6488,19 @@ paths:
           $ref: '#/components/responses/NotFound'
     patch:
       tags: ['Notifications']
-      summary: |
-        Actions on a notification. Only changing `is_ack` column is possible.
+      summary: Update the acknowledgment status of a notification.
       operationId: patch-notification
+      requestBody:
+        description: Defines whether the notification is acknowledged.
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                is_ack:
+                  type: integer
+                  description: Acknowledge the notification. `0` for unacknowledging, `1` for acknowledge.
+                  enum: [ 0, 1 ]
       responses:
         '200':
           description: The updated notification.
@@ -6697,18 +7073,24 @@ paths:
                 email_attr:
                   type: string
                   description: What attribute to look for the email.
-                team_attr:
-                  type: string
-                  description: What attribute to look for the team.
                 fname_attr:
                   type: string
                   description: What attribute to look for the firstname.
                 lname_attr:
                   type: string
                   description: What attribute to look for the lastname.
+                team_attr:
+                  type: string
+                  description: What attribute to look for the team.
+                  nullable: true
                 orgid_attr:
                   type: string
                   description: What attribute to look for the internal id.
+                  nullable: true
+                orcid_attr:
+                  type: string
+                  description: What attribute to look for the ORCID.
+                  nullable: true
       responses:
         '201':
           description: The idp has been created.
@@ -7217,30 +7599,30 @@ paths:
 
   # EXTRA FIELDS KEYS
   /extra_fields_keys:
-    summary: Search for extra fields keys used by a team. Results are sorted by frequency.
+    summary: Search for custom fields keys used by a team. Results are sorted by frequency.
     parameters:
       - name: q
         in: query
         description: |
-          Search for a term in the extra fields keys.
+          Search for a term in the custom fields keys.
         schema:
           type: string
           default: ''
       - name: limit
         in: query
         description: |
-          Number of extra fields keys that will be returned. Value >= -1; -1: no limit, 0: users default setting from UCP.
+          Number of custom fields keys that will be returned. Value >= -1; -1: no limit, 0: users default setting from UCP.
         schema:
           type: integer
           default: 0
 
     get:
-      tags: ['Extra Fields Keys']
-      summary: Read extra fields keys.
-      operationId: extra-fields-keys
+      tags: ['Custom Fields Keys']
+      summary: Read custom fields keys.
+      operationId: custom-fields-keys
       responses:
         '200':
-          description: A list of extra fields keys and their frequency.
+          description: A list of custom fields keys and their frequency.
           content:
             application/json:
               schema:
