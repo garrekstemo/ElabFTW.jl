@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.3.1] - 2026-10-02
 
 Syncs the client to eLabFTW API v2 6.0.5 (from 5.6.11).
 
@@ -32,8 +32,12 @@ Syncs the client to eLabFTW API v2 6.0.5 (from 5.6.11).
 - Creating a container in a full storage unit (`create_container`) or moving
   one there (`update_container` with `storage_id`) is rejected by the server
   with a 400 (`ClientError`).
-- Fixed unresolved merge-conflict markers in `src/storage.jl` that were left
-  in the `update_container` docstring.
+- Upstream API snapshot bumped to 6.0.5.
+
+### Fixed
+
+- Unresolved merge-conflict markers that 0.3.0 shipped in the
+  `update_container` docstring.
 
 ## [0.3.0] - 2026-09-03
 
@@ -141,6 +145,8 @@ First release.
   CI, and a monthly CI drift check against the vendored upstream OpenAPI spec
   (`upstream/openapi.yaml`, eLabFTW 5.5.12).
 
+[0.3.1]: https://github.com/garrekstemo/ElabFTW.jl/releases/tag/v0.3.1
+[0.3.0]: https://github.com/garrekstemo/ElabFTW.jl/releases/tag/v0.3.0
 [0.2.1]: https://github.com/garrekstemo/ElabFTW.jl/releases/tag/v0.2.1
 [0.2.0]: https://github.com/garrekstemo/ElabFTW.jl/releases/tag/v0.2.0
 [0.1.0]: https://github.com/garrekstemo/ElabFTW.jl/releases/tag/v0.1.0
