@@ -55,6 +55,10 @@ Notable non-obvious cases:
 - **`notif_step` / `notif_item_step`** on a step with no `deadline` — server returns HTTP **500**. Use [`update_step`](@ref) to set a deadline first.
 - **`delete_storage_unit`** on a unit with children or containers — `ClientError` (status 422). Empty children/containers first.
 - **`create_container`** internally fetches the listing after POST to find the new row ID (the server's `Location` header is unusable for this endpoint). If the listing has no matching row, raises `ParseError`.
+- **`create_container` / `update_container`** into a storage unit whose `capacity` is reached — `ClientError` (status 400).
+- **`delete_container`** when the owning team has `capture_container_deletion_reason` enabled — `ClientError` (status 400). Use [`destroy_container`](@ref) with a `deletion_reason`.
+- **`update_experiment` / `update_item`** with `userid` or `team` — `ClientError` (status 400) on eLabFTW 6.0+. Use [`transfer_experiment_owner`](@ref) / [`transfer_item_owner`](@ref).
+- **`transfer_experiment_owner` / `transfer_item_owner`** by anyone other than an admin of the entity's team or a sysadmin — `PermissionError`. A new owner who is not a member of `team` — `ClientError` (status 422).
 
 See per-function `# Throws` sections for argument-validation specifics.
 

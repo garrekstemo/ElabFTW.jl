@@ -223,6 +223,7 @@ cid = create_container(:items, 42; storage_id=7, qty_stored=50, qty_unit="mL")
 ```
 
 # Throws
+- `ClientError` (400) — the storage unit has a `capacity` and is already full.
 - `ParseError` — the POST succeeded but the follow-up listing has no row
   matching `storage_id`. Indicates server behavior has drifted; open an issue.
 """

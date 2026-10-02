@@ -204,30 +204,39 @@ function sign_item(id::Int;
 end
 
 """
-    transfer_experiment_owner(id::Int; userid::Int, team::Int) -> Dict
+    transfer_experiment_owner(id::Int; userid::Int, team::Int)
 
-Transfer ownership of an experiment to another user via the `updateowner`
-action. Both `userid` and `team` are required; the new owner must belong to
-the destination team, and non-admin users can only transfer within their
-current team. Returns the updated experiment record. Requires an eLabFTW
-server running 6.x or later.
+Transfer ownership of an experiment to user `userid` in team `team` via the
+`updateowner` action; its uploads move with it. Returns `nothing`: the server
+sends no record back, since the caller may lose read access once the
+experiment changes hands. Requires an eLabFTW server running 6.x or later.
+
+Only an admin of the experiment's team or a sysadmin may transfer ownership
+(as of eLabFTW 6.0.5); anyone else gets a [`PermissionError`](@ref). The new
+owner must be a member of `team`, otherwise the server answers with a
+[`ClientError`](@ref) (422).
 
 Since eLabFTW 6.0 this is the only way to change the owner of an existing
-entity; sending `userid`/`team` through [`update_experiment`](@ref) no longer
-transfers ownership.
+entity; sending `userid`/`team` through [`update_experiment`](@ref) is
+rejected with a `ClientError` (400).
 
 # Example
 ```julia
 transfer_experiment_owner(42; userid=21, team=5)
 ```
 """
-transfer_experiment_owner(id::Int; userid::Int, team::Int) =
+function transfer_experiment_owner(id::Int; userid::Int, team::Int)
     _patch_action(:experiments, id, "updateowner"; userid=userid, team=team)
+    return nothing
+end
 
 """
-    transfer_item_owner(id::Int; userid::Int, team::Int) -> Dict
+    transfer_item_owner(id::Int; userid::Int, team::Int)
 
-Transfer ownership of an item (resource). See [`transfer_experiment_owner`](@ref).
+Transfer ownership of an item (resource). Returns `nothing`. See
+[`transfer_experiment_owner`](@ref).
 """
-transfer_item_owner(id::Int; userid::Int, team::Int) =
+function transfer_item_owner(id::Int; userid::Int, team::Int)
     _patch_action(:items, id, "updateowner"; userid=userid, team=team)
+    return nothing
+end

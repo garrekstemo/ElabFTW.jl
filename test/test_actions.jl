@@ -37,15 +37,19 @@
 
     @testset "Transfer ownership" begin
         eid = create_experiment(title="owner-exp")
-        r = transfer_experiment_owner(eid; userid=21, team=5)
-        @test r["userid"] == 21
-        @test r["team"] == 5
+        @test transfer_experiment_owner(eid; userid=21, team=5) === nothing
+        e = get_experiment(eid)
+        @test e["userid"] == 21
+        @test e["team"] == 5
+        # 6.0+ rejects ownership fields on a plain update
+        @test_throws ClientError update_experiment(eid; userid=22)
         delete_experiment(eid)
 
         iid = create_item(title="owner-item")
-        r = transfer_item_owner(iid; userid=22, team=6)
-        @test r["userid"] == 22
-        @test r["team"] == 6
+        @test transfer_item_owner(iid; userid=22, team=6) === nothing
+        i = get_item(iid)
+        @test i["userid"] == 22
+        @test i["team"] == 6
         delete_item(iid)
     end
 

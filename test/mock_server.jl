@@ -264,7 +264,9 @@ function apply_action!(entity::Dict, data::Dict)
             return HTTP.Response(400, "userid and team are required")
         entity["userid"] = data["userid"]
         entity["team"] = data["team"]
-        return json_response(entity_view(entity))
+        # Real server skips the read-back (the caller may lose read access
+        # after the transfer) and returns an empty array.
+        return json_response(Any[])
     end
     return HTTP.Response(400, "unknown action: $action")
 end
@@ -520,6 +522,10 @@ function route(state::MockState, method::String, rest::Vector{String}, req::HTTP
             if haskey(data, "action")
                 return apply_action!(entity, data)
             end
+            # eLabFTW 6.0+ moves ownership only through action=updateowner and
+            # rejects ownership fields on a plain update.
+            (haskey(data, "userid") || haskey(data, "team")) &&
+                return HTTP.Response(400, "Use the 'action:updateowner' to transfer ownership.")
             # Snapshot a revision whenever `body` is being replaced with a
             # different value — matches the real server's "on meaningful edit"
             # behavior without trying to emulate min_days/min_delta config.
@@ -1079,6 +1085,11 @@ function route_subresource(state::MockState, method::String, entity::Dict, colle
                 storage_id = subid
                 haskey(state.storage_units, storage_id) ||
                     return HTTP.Response(400, "storage unit not found")
+                cap = get(state.storage_units[storage_id], "capacity", nothing)
+                if !isnothing(cap) &&
+                   count(c -> c["storage_id"] == storage_id, values(state.containers)) >= cap
+                    return HTTP.Response(400, "storage unit is full")
+                end
                 qty_stored = get(data, "qty_stored", nothing)
                 isnothing(qty_stored) && return HTTP.Response(400, "qty_stored required")
                 qty_unit = String(get(data, "qty_unit", ""))

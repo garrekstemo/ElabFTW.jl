@@ -98,6 +98,7 @@
 
         cid2 = create_container(:items, item_id; storage_id=other, qty_stored=2, qty_unit="g")
         @test_throws ClientError update_container(:items, item_id, cid2; storage_id=small)
+        @test_throws ClientError create_container(:items, item_id; storage_id=small, qty_stored=3, qty_unit="g")
 
         update_storage_unit(small; capacity=5)
         @test get_storage_unit(small)["capacity"] == 5
