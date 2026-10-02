@@ -5,7 +5,7 @@ info:
     This document describes all available endpoints and methods for eLabFTW's API version 2.
   version: 2.0.0
 servers:
-  - url: https://elab.local:3148/api/v2
+  - url: https://elab.localhost:3148/api/v2
     description: Local dev server
   - url: https://demo.elabftw.net/api/v2
     description: Official demo server
@@ -206,7 +206,6 @@ components:
         enum: [0, 1]
       description: |
         Return all columns of each entry when set to 1.
-
   # end query parameters for entity
 
   requestBodies:
@@ -265,6 +264,7 @@ components:
             - timestamp
             - updatemetadatafield
             - update
+            - updateowner
         passphrase:
           type: string
           description: >
@@ -282,6 +282,18 @@ components:
             - 40: Review
             - 50: Safety
           example: 40
+        userid:
+          type: integer
+          description: >
+            ID of the new owner. Required when action is "updateowner".
+            The user must belong to the destination team.
+          example: 21
+        team:
+          type: integer
+          description: >
+            ID of the destination team. Required when action is "updateowner".
+            Non-admin users can only transfer ownership within their current team.
+          example: 5
       required: [action]
 
     EntityAndItemEditable:
@@ -300,8 +312,6 @@ components:
         created_at:
           type: string
         last_used_at:
-          type: string
-        hash:
           type: string
         can_write:
           type: integer
@@ -1009,7 +1019,7 @@ components:
           smtp_address:
             type: string
             example: 'mail.smtp2go.com'
-            default: 'mail.smtp2go.com'
+            default: 'mail.example.com'
           smtp_encryption:
             type: string
             example: 'ssl'
@@ -1365,13 +1375,14 @@ components:
           type: integer
           description: |
             User ID of the entity owner.
-            When transferring ownership, the `team` field should also be provided (optional).
+            For existing entities, ownership can only be transferred through the `PatchAction`
+            schema with `action: "updateowner"`; both `userid` and `team` are required.
         team:
           type: integer
           description: |
-            Optional team context for ownership transfer.
-            If omitted, the requester’s team is used by default.
-            If provided, the API validates that the target user is a member of the specified team.
+            Team ID of the entity.
+            For existing entities, ownership can only be transferred through the `PatchAction`
+            schema with `action: "updateowner"`; both `userid` and `team` are required.
     # ENTITY DUPLICATE
     entity_duplicate:
       type: object
@@ -1505,7 +1516,7 @@ components:
               description: Set to 1 to prevent further changes to the permissions setting for write access
               default: 0
     entity_template:
-      description: For experiments templates and items types (resources templates)
+      description: For experiment templates and resource templates
       allOf:
         - $ref: '#/components/schemas/entity_template_editable'
         - $ref: '#/components/schemas/entity'
@@ -1701,7 +1712,7 @@ components:
           type: string
           nullable: true
         source:
-          type: int
+          type: integer
           nullable: true
         certs:
           type: array
@@ -1854,7 +1865,7 @@ components:
         extra_fields:
           type: object
           nullable: true
-          description: See https://doc.elabftw.net/docs/usage/metadata#extra-fields-objects
+          description: See https://doc.elabftw.net/docs/usage/user-guide/custom-fields
           additionalProperties:
             type: object
             nullable: true
@@ -1862,10 +1873,29 @@ components:
               type:
                 nullable: true
                 type: string
-                enum: ['allow_multi_values', 'blank_value_on_duplicate', 'checkbox', 'date', 'datetime-local', 'description', 'email', 'experiments', 'group_id', 'items', 'number', 'options', 'position', 'radio', 'required', 'select', 'text', 'time', 'unit', 'url', 'users']
+                enum: ['checkbox', 'compounds', 'date', 'datetime-local', 'email', 'experiments', 'items', 'number', 'radio', 'select', 'text', 'time', 'uploads', 'url', 'users']
               value:
-                nullable: true
-                type: string
+                description: |
+                  The selected or input value. Fields accept a single string or number by default.
+                  When `allow_multi_values` is `true`, the value is stored as an array of strings
+                  or numbers. An empty array represents a multi-value field with no values.
+                oneOf:
+                  - type: string
+                    nullable: true
+                  - type: number
+                  - type: array
+                    items:
+                      oneOf:
+                        - type: string
+                        - type: number
+                example: ['first', 'second']
+              allow_multi_values:
+                type: boolean
+                default: false
+                description: |
+                  Allow this custom field to hold multiple values. When enabled, `value` is stored
+                  as an array. Dropdown fields use a multi-select input; all other field types use
+                  repeatable inputs. Arrays are not accepted for fields where this is `false`.
               group_id:
                 type: integer
                 nullable: true
@@ -1962,6 +1992,22 @@ components:
           type: string
           description: Full hierarchical path from root to this unit
           example: "Building A > Room 101 > Freezer A"
+        capacity:
+          type: integer
+          nullable: true
+          description: |
+            Maximum number of containers this unit should hold. Null means unlimited;
+            0 means nothing may be stored directly in this unit, which suits a unit that
+            exists to hold other units, such as a building or a room.
+          example: 96
+        occupancy:
+          type: integer
+          description: |
+            Number of containers stored directly in this unit, never counting the contents
+            of units nested inside it. Deliberately unfiltered: a container occupies its
+            slot whether or not you can read the entity it belongs to, and whether or not
+            that entity is in the bin. This is the number compared against `capacity`.
+          example: 12
         level_depth:
           type: integer
           description: Depth level in the hierarchy (0 for root)
@@ -1996,6 +2042,12 @@ components:
           type: integer
           default: 0
           description: Binary toggle to force usage of templates.
+        capture_container_deletion_reason:
+          type: integer
+          default: 0
+          description: |
+            Binary toggle to require a reason (deletion_reason, and deletion_comment
+            for "other") when deleting a container of an entity owned by this team.
         created_at:
           type: string
         orgid:
@@ -2101,6 +2153,41 @@ components:
         fullname:
           type: string
 
+    # ROR
+    ror:
+      type: object
+      required: ['ror', 'created_at']
+      properties:
+        ror:
+          type: string
+          description: Research Organization Registry identifier.
+          pattern: '^0[a-hj-km-np-tv-z0-9A-HJ-KM-NP-TV-Z]{6}[0-9]{2}$'
+          example: '05kxdq627'
+        created_at:
+          type: string
+          description: Timestamp at which the ROR was associated.
+          example: '2026-09-11 12:49:00'
+    team_ror:
+      allOf:
+        - $ref: '#/components/schemas/ror'
+        - type: object
+          required: ['teams_id']
+          properties:
+            teams_id:
+              type: integer
+              description: ID of the associated team.
+              example: 4
+    user_ror:
+      allOf:
+        - $ref: '#/components/schemas/ror'
+        - type: object
+          required: ['users_id']
+          properties:
+            users_id:
+              type: integer
+              description: ID of the associated user.
+              example: 42
+
     # users seen as a user, with limited columns
     users:
       description: Response for when requester is a regular user.
@@ -2151,7 +2238,7 @@ components:
             auth_service:
               type: integer
               nullable: true
-              description: What mechanism was used to login, see AuthType Enum.
+              description: What mechanism was used to login, see AuthMethod Enum.
             is_sysadmin:
               type: integer
               default: 0
@@ -2358,7 +2445,12 @@ paths:
     post:
       tags: ['Containers']
       summary: Create a container for this entity.
-      description: Store this entity in a storage unit with a specified quantity.
+      description: |
+        Store this entity in a storage unit with a specified quantity.
+
+        Rejected with `400` if the storage unit has a `capacity` and already holds
+        that many containers. Containers of binned entities still occupy their slot,
+        as binning a record does not empty a freezer.
       operationId: post-container
       requestBody:
         description: Parameters for creating a container.
@@ -2366,7 +2458,7 @@ paths:
           application/json:
             schema:
               type: object
-              required: ['storage_id', 'qty_stored']
+              required: ['qty_stored']
               properties:
                 qty_stored:
                   type: number
@@ -2410,38 +2502,85 @@ paths:
           $ref: '#/components/responses/NotFound'
     patch:
       tags: ['Containers']
-      summary: Modify a container.
+      summary: Modify a container, or delete one giving a reason.
       description: |
-        Update the quantity stored, the unit, or the storage location of a
-        container. Setting `storage_id` moves the container to a different
-        storage unit while preserving its `id` and `created_at`.
+        With `action: update` (the default), update the quantity stored, the unit,
+        or the storage location of a container. Setting `storage_id` moves the
+        container to a different storage unit while preserving its `id` and
+        `created_at`.
+
+        A move is rejected with `400` if the destination has a `capacity` and is
+        already full. Moving a container out of a full location is always allowed,
+        and moving it to where it already is remains a no-op.
+
+        With `action: destroy`, remove the container `subid`. This is the way to
+        delete when the team that owns the entity has
+        `capture_container_deletion_reason` enabled: a
+        `deletion_reason` is then mandatory, and so is a `deletion_comment` when the
+        reason is `other` (100). The reason is recorded in the changelog of the
+        parent entity. Otherwise, use `DELETE`, which takes no body.
       operationId: patch-container
       requestBody:
-        description: Parameters for modifying a container.
+        description: Parameters for modifying or deleting a container.
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                qty_stored:
-                  type: number
-                  description: New quantity stored.
-                  example: 15.0
-                qty_unit:
-                  type: string
-                  description: New unit of the quantity.
-                  example: "g"
-                storage_id:
-                  type: integer
-                  description: |
-                    New storage unit id. Moves the container to that storage
-                    unit. Requires write access on the parent entity and (when
-                    `inventory_require_edit_rights=1`) the
-                    `can_manage_inventory_locations` permission.
-                  example: 12
+              oneOf:
+                - title: Update
+                  type: object
+                  properties:
+                    action:
+                      type: string
+                      enum: ['update']
+                    qty_stored:
+                      type: number
+                      description: New quantity stored.
+                      example: 15.0
+                    qty_unit:
+                      type: string
+                      description: New unit of the quantity.
+                      example: "g"
+                    storage_id:
+                      type: integer
+                      description: |
+                        New storage unit id. Moves the container to that storage
+                        unit. Requires write access on the parent entity and (when
+                        `inventory_require_edit_rights=1`) the
+                        `can_manage_inventory_locations` permission.
+                      example: 12
+                - title: Destroy
+                  type: object
+                  required: ['action']
+                  properties:
+                    action:
+                      type: string
+                      enum: ['destroy']
+                    deletion_reason:
+                      type: integer
+                      # see ContainerDeletionReason enum
+                      enum: [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
+                      description: |
+                        10 used up in authorised work, 20 no longer required,
+                        30 consent withdrawn or use prohibited, 40 approval or
+                        retention period ended, 50 shelf life exceeded,
+                        60 unsuitable for intended use, 70 contaminated,
+                        80 storage or transport incident, 90 collected or
+                        registered in error, 100 other.
+                      example: 70
+                    deletion_comment:
+                      type: string
+                      maxLength: 255
+                      description: |
+                        Free text, accepted with any reason and required with
+                        `other` (100). Anything longer than 255 characters is
+                        rejected with a 400, not truncated, so that no audit
+                        record is silently shortened. Stored as typed.
+                      example: 'spilled in transit'
       responses:
         '200':
-          description: The updated container.
+          description: |
+            The updated container, or the container as it was just before an
+            `action: destroy` removed it.
           content:
             application/json:
               schema:
@@ -2455,11 +2594,19 @@ paths:
     delete:
       tags: ['Containers']
       summary: Delete a container.
-      description: Remove an entity from a storage unit.
+      description: |
+        Remove an entity from a storage unit. Takes no body: when the team that
+        owns the entity has `capture_container_deletion_reason` enabled, this
+        returns 400 and the `PATCH` variant must be used instead.
+
+        A container that does not exist returns 404, so a deletion that removed
+        nothing is never reported as a success.
       operationId: delete-container
       responses:
         '204':
           description: The container was deleted.
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
            $ref: '#/components/responses/Unauthorized'
         '404':
@@ -2474,7 +2621,7 @@ paths:
       description: |
         Without parameters, returns the full list of containers (assignments of experiments or resources to storage locations) that you have access to.
 
-        With `?hierarchy=true`, returns a flat list of all storage units (freezers, boxes, positions, etc.) with their hierarchy metadata (`id`, `name`, `parent_id`, `full_path`, `level_depth`, `children_count`). This allows clients to discover, traverse, or display the storage unit tree.
+        With `?hierarchy=true`, returns a flat list of all storage units (freezers, boxes, positions, etc.) with their hierarchy metadata (`id`, `name`, `parent_id`, `full_path`, `capacity`, `occupancy`, `level_depth`, `children_count`). This allows clients to discover, traverse, or display the storage unit tree.
       operationId: read-storage-units
       parameters:
         - name: hierarchy
@@ -2484,7 +2631,7 @@ paths:
             type: boolean
           description: |
             When true, returns a flat list of all storage units in the hierarchy
-            (id, name, parent_id, full_path, level_depth, children_count)
+            (id, name, parent_id, full_path, capacity, occupancy, level_depth, children_count)
             instead of the default container assignment list.
       responses:
         '200':
@@ -2705,6 +2852,20 @@ paths:
                           type: string
                           description: Full path from root to this unit, separated by " > ".
                           example: "Hospital > 4th floor > Freezer A"
+                        capacity:
+                          type: integer
+                          nullable: true
+                          description: |
+                            Maximum number of containers this unit should hold. Null means
+                            unlimited; 0 means nothing may be stored directly in this unit.
+                          example: 96
+                        occupancy:
+                          type: integer
+                          description: |
+                            Containers stored directly in this unit, not counting units
+                            nested inside it. Unfiltered by state or by your read access,
+                            so it is directly comparable to `capacity`.
+                          example: 12
                         level_depth:
                           type: integer
                           description: Depth in hierarchy (0 for root units).
@@ -2739,6 +2900,21 @@ paths:
                   nullable: true
                   description: ID of the parent storage unit. Set to null for a top-level unit.
                   example: null
+                capacity:
+                  nullable: true
+                  oneOf:
+                    - type: integer
+                      minimum: 0
+                      maximum: 4294967295
+                    - type: string
+                      pattern: '^(0|[1-9][0-9]*)?$'
+                  description: |
+                    Maximum number of containers this unit should hold.
+                    Omit, or pass `null` or `""`, for unlimited (the default). Pass `0` for
+                    a unit that holds other units but never containers.
+                    Accepted as an integer or as its decimal string form, so that form
+                    submissions need no conversion. The upper bound is 4294967295.
+                  example: 96
       responses:
         '201':
           description: The storage unit has been created.
@@ -2782,7 +2958,7 @@ paths:
       tags: ['Storage units']
       summary: Modify a storage unit.
       description: |
-        Update the name and/or the parent of a storage unit. Setting
+        Update the name, the capacity and/or the parent of a storage unit. Setting
         `parent_id` reparents the unit (and everything under it) in place.
         Pass `parent_id: null` to move the unit to the root. Requires
         permission to manage inventory locations.
@@ -2806,6 +2982,23 @@ paths:
                     New parent storage unit id, or `null` to move to the root.
                     Cannot be the unit itself or any of its descendants.
                   example: 5
+                capacity:
+                  nullable: true
+                  oneOf:
+                    - type: integer
+                      minimum: 0
+                      maximum: 4294967295
+                    - type: string
+                      pattern: '^(0|[1-9][0-9]*)?$'
+                  description: |
+                    Maximum number of containers this unit should hold.
+                    Pass `null` or `""` for unlimited. Pass `0` for a unit that
+                    holds other units but never containers.
+                    Accepted as an integer or as its decimal string form, so that form
+                    submissions need no conversion. The upper bound is 4294967295.
+                    May be set below the current occupancy, so that an over-filled
+                    location can be declared and then drained.
+                  example: 96
       responses:
         '200':
           description: The updated storage unit.
@@ -3500,6 +3693,67 @@ paths:
         '403':
           $ref: '#/components/responses/Forbidden'
 
+  # INSTANCE RORS
+  /instance/rors:
+    summary: Manage RORs associated with the instance.
+    get:
+      tags: ['RORs']
+      summary: Read all RORs associated with the instance.
+      operationId: read-instance-rors
+      responses:
+        '200':
+          description: A list of RORs associated with the instance.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ror'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /instance/rors/{ror}:
+    summary: Manage a ROR associated with the instance.
+    parameters:
+      - name: ror
+        in: path
+        description: Research Organization Registry identifier.
+        required: true
+        schema:
+          type: string
+          pattern: '^0[a-hj-km-np-tv-z0-9A-HJ-KM-NP-TV-Z]{6}[0-9]{2}$'
+        example: '05kxdq627'
+    post:
+      tags: ['RORs']
+      summary: Associate a ROR with the instance. Requires Sysadmin permissions.
+      operationId: post-instance-ror
+      responses:
+        '201':
+          description: The ROR was associated with the instance.
+          headers:
+            location:
+              description: URL returned for the created association.
+              schema:
+                type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    delete:
+      tags: ['RORs']
+      summary: Remove a ROR from the instance. Requires Sysadmin permissions.
+      operationId: delete-instance-ror
+      responses:
+        '204':
+          description: The ROR was removed from the instance.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
 
   # INSTANCE BRANDING
   /instance/branding/{id}:
@@ -3953,11 +4207,11 @@ paths:
                 experiments_templates:
                   type: string
                   example: "on"
-                  description: Set to "on" to include experiments templates in the export
+                  description: Set to "on" to include experiment templates in the export
                 items_types:
                   type: string
                   example: "on"
-                  description: Set to "on" to include resources categories in the export
+                  description: Set to "on" to include resource templates in the export
                 changelog:
                   type: string
                   example: "on"
@@ -4274,7 +4528,7 @@ paths:
           type: integer
     get:
       tags: ['Links to experiments']
-      summary: Read all experiments links of that entity.
+      summary: Read all experiment links of that entity.
       operationId: read-entity-experiments-links
       responses:
         '200':
@@ -4290,7 +4544,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
   /{entity_type}/{id}/experiments_links/{subid}:
-    summary: Actions on experiments link of an entity
+    summary: Actions on experiment link of an entity
     parameters:
       - name: entity_type
         in: path
@@ -5300,7 +5554,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  # EXPERIMENTS CATEGORIES
+  # EXPERIMENT CATEGORIES
   /teams/{id}/experiments_categories:
     parameters:
       - name: id
@@ -5310,12 +5564,12 @@ paths:
         schema:
           type: integer
     get:
-      tags: ['Experiments categories']
-      summary: Read experiments categories of a team.
+      tags: ['Experiment categories']
+      summary: Read experiment categories of a team.
       operationId: read-team-experiments-categories
       responses:
         '200':
-          description: A list of experiments categories for the team.
+          description: A list of experiment categories for the team.
           content:
             application/json:
               schema:
@@ -5327,7 +5581,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
     post:
-      tags: ['Experiments categories']
+      tags: ['Experiment categories']
       operationId: post-team-one-expcat
       summary: Create a new category for experiments.
       requestBody:
@@ -5373,7 +5627,7 @@ paths:
         schema:
           type: integer
     get:
-      tags: ['Experiments categories']
+      tags: ['Experiment categories']
       operationId: read-team-one-expcat
       summary: Read a category.
       responses:
@@ -5388,7 +5642,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
     patch:
-      tags: ['Experiments categories']
+      tags: ['Experiment categories']
       operationId: patch-expcat
       summary: Modify a category.
       requestBody:
@@ -5411,7 +5665,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
     delete:
-      tags: ['Experiments categories']
+      tags: ['Experiment categories']
       summary: Delete a category.
       operationId: delete-expcat
       responses:
@@ -5422,7 +5676,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  # RESOURCES CATEGORIES
+  # RESOURCE CATEGORIES
   /teams/{id}/resources_categories:
     parameters:
       - name: id
@@ -5432,12 +5686,12 @@ paths:
         schema:
           type: integer
     get:
-      tags: [ 'Resources categories' ]
-      summary: Read resources categories of a team.
+      tags: [ 'Resource categories' ]
+      summary: Read resource categories of a team.
       operationId: read-team-resources-categories
       responses:
         '200':
-          description: A list of resources categories for the team.
+          description: A list of resource categories for the team.
           content:
             application/json:
               schema:
@@ -5449,7 +5703,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
     post:
-      tags: [ 'Resources categories' ]
+      tags: [ 'Resource categories' ]
       operationId: post-team-one-rescat
       summary: Create a new category for resources.
       requestBody:
@@ -5495,7 +5749,7 @@ paths:
         schema:
           type: integer
     get:
-      tags: [ 'Resources categories' ]
+      tags: [ 'Resource categories' ]
       operationId: read-team-one-rescat
       summary: Read a category.
       responses:
@@ -5510,7 +5764,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
     patch:
-      tags: [ 'Resources categories' ]
+      tags: [ 'Resource categories' ]
       operationId: patch-rescat
       summary: Modify a category.
       requestBody:
@@ -5533,7 +5787,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
     delete:
-      tags: [ 'Resources categories' ]
+      tags: [ 'Resource categories' ]
       summary: Delete a category.
       operationId: delete-rescat
       responses:
@@ -5544,7 +5798,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  # EXPERIMENTS STATUS
+  # EXPERIMENT STATUS
   /teams/{id}/experiments_status:
     parameters:
       - name: id
@@ -5554,8 +5808,8 @@ paths:
         schema:
           type: integer
     get:
-      tags: ['Experiments status']
-      summary: Read experiments status of a team.
+      tags: ['Experiment status']
+      summary: Read experiment status of a team.
       operationId: read-team-experiments-status
       responses:
         '200':
@@ -5571,9 +5825,9 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
     post:
-      tags: ['Experiments status']
+      tags: ['Experiment status']
       operationId: post-team-one-expstatus
-      summary: Create a new experiments status.
+      summary: Create a new experiment status.
       requestBody:
         description: Parameters for creating a status.
         content:
@@ -5590,10 +5844,10 @@ paths:
                     Hex color without leading \#.
       responses:
         '201':
-          description: New experiments status created.
+          description: New experiment status created.
           headers:
             location:
-              description: An URL to the experiments status that was created.
+              description: An URL to the experiment status that was created.
               schema:
                 type: string
         '400':
@@ -5617,7 +5871,7 @@ paths:
         schema:
           type: integer
     get:
-      tags: ['Experiments status']
+      tags: ['Experiment status']
       operationId: read-team-one-expstatus
       summary: Read a status.
       responses:
@@ -5632,7 +5886,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
     patch:
-      tags: ['Experiments status']
+      tags: ['Experiment status']
       operationId: patch-expstatus
       summary: Modify a status.
       requestBody:
@@ -5655,7 +5909,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
     delete:
-      tags: ['Experiments status']
+      tags: ['Experiment status']
       summary: Delete a status.
       operationId: delete-expstatus
       responses:
@@ -5676,12 +5930,12 @@ paths:
         schema:
           type: integer
     get:
-      tags: ['Resources status']
-      summary: Read resources status of a team.
+      tags: ['Resource status']
+      summary: Read resource status of a team.
       operationId: read-team-items-status
       responses:
         '200':
-          description: A list of resources status for the team.
+          description: A list of resource status for the team.
           content:
             application/json:
               schema:
@@ -5691,11 +5945,11 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
     post:
-      tags: ['Resources status']
+      tags: ['Resource status']
       operationId: post-team-one-resstat
       summary: Create a new status for resources.
       requestBody:
-        description: Parameters for creating a resources status.
+        description: Parameters for creating a resource status.
         content:
           application/json:
             schema:
@@ -5710,10 +5964,10 @@ paths:
                     Hex color without leading \#.
       responses:
         '201':
-          description: New resources status created.
+          description: New resource status created.
           headers:
             location:
-              description: An URL to the resources status that was created.
+              description: An URL to the resource status that was created.
               schema:
                 type: string
         '400':
@@ -5737,7 +5991,7 @@ paths:
         schema:
           type: integer
     get:
-      tags: ['Resources status']
+      tags: ['Resource status']
       operationId: read-team-one-resstatus
       summary: Read a status.
       responses:
@@ -5752,7 +6006,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
     patch:
-      tags: ['Resources status']
+      tags: ['Resource status']
       operationId: patch-resstatus
       summary: Modify a status.
       requestBody:
@@ -5775,7 +6029,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
     delete:
-      tags: ['Resources status']
+      tags: ['Resource status']
       summary: Delete a status.
       operationId: delete-resstatus
       responses:
@@ -6317,6 +6571,186 @@ paths:
           $ref: '#/components/responses/NotFound'
         '422':
           $ref: '#/components/responses/Unprocessable'
+
+  # TEAM RORS
+  /teams/{id}/rors:
+    summary: Manage RORs associated with a team.
+    parameters:
+      - name: id
+        in: path
+        description: ID of the team.
+        required: true
+        schema:
+          type: integer
+    get:
+      tags: ['RORs']
+      summary: Read all RORs associated with a team.
+      operationId: read-team-rors
+      responses:
+        '200':
+          description: A list of RORs associated with the team.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/team_ror'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /teams/{id}/rors/{ror}:
+    summary: Manage a ROR associated with a team.
+    parameters:
+      - name: id
+        in: path
+        description: ID of the team.
+        required: true
+        schema:
+          type: integer
+      - name: ror
+        in: path
+        description: Research Organization Registry identifier.
+        required: true
+        schema:
+          type: string
+          pattern: '^0[a-hj-km-np-tv-z0-9A-HJ-KM-NP-TV-Z]{6}[0-9]{2}$'
+        example: '05kxdq627'
+    post:
+      tags: ['RORs']
+      summary: Associate a ROR with a team. Requires write access to the team.
+      operationId: post-team-ror
+      responses:
+        '201':
+          description: The ROR was associated with the team.
+          headers:
+            location:
+              description: URL returned for the created association.
+              schema:
+                type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: ['RORs']
+      summary: Remove a ROR from a team. Requires write access to the team.
+      operationId: delete-team-ror
+      responses:
+        '204':
+          description: The ROR was removed from the team.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # USER RORS
+  /users/{id}/rors:
+    summary: Manage RORs associated with a user.
+    parameters:
+      - name: id
+        in: path
+        description: ID of the user or `me`.
+        required: true
+        schema:
+          oneOf:
+            - type: integer
+            - type: string
+              enum: ['me']
+        examples:
+          first:
+            summary: Access our own user.
+            value: 'me'
+          second:
+            summary: Access user with ID 42.
+            value: 42
+    get:
+      tags: ['RORs']
+      summary: Read all RORs associated with a user.
+      operationId: read-user-rors
+      responses:
+        '200':
+          description: A list of RORs associated with the user.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/user_ror'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /users/{id}/rors/{ror}:
+    summary: Manage a ROR associated with a user.
+    parameters:
+      - name: id
+        in: path
+        description: ID of the user or `me`.
+        required: true
+        schema:
+          oneOf:
+            - type: integer
+            - type: string
+              enum: ['me']
+        examples:
+          first:
+            summary: Access our own user.
+            value: 'me'
+          second:
+            summary: Access user with ID 42.
+            value: 42
+      - name: ror
+        in: path
+        description: Research Organization Registry identifier.
+        required: true
+        schema:
+          type: string
+          pattern: '^0[a-hj-km-np-tv-z0-9A-HJ-KM-NP-TV-Z]{6}[0-9]{2}$'
+        example: '05kxdq627'
+    post:
+      tags: ['RORs']
+      summary: Associate a ROR with a user. Requires Admin permissions for the user.
+      operationId: post-user-ror
+      responses:
+        '201':
+          description: The ROR was associated with the user.
+          headers:
+            location:
+              description: URL returned for the created association.
+              schema:
+                type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: ['RORs']
+      summary: Remove a ROR from a user. Requires Admin permissions for the user.
+      operationId: delete-user-ror
+      responses:
+        '204':
+          description: The ROR was removed from the user.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   # USERS UPLOADS
   /users/{id}/uploads:
@@ -7840,7 +8274,7 @@ paths:
               schema:
                 type: string
                 format: uri
-              example: https://elab.local:3148/api/v2/dspace/1799
+              example: https://elab.localhost:3148/api/v2/dspace/1799
             Cache-Control:
               description: Cache policy applied to this response
               schema:

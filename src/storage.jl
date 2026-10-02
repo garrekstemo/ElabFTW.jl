@@ -9,8 +9,8 @@ List storage data. Two modes:
   of the form `(entity → storage unit, quantity)` across the whole team.
   Useful for "where is everything in our inventory?" views.
 - `hierarchy=true` — returns **storage units** (freezers, shelves, boxes)
-  with `parent_id`, `full_path`, `level_depth`, and `children_count`. Use
-  this to render the storage tree.
+  with `parent_id`, `full_path`, `capacity`, `occupancy`, `level_depth`, and
+  `children_count`. Use this to render the storage tree.
 
 The default mode is the misleadingly-named endpoint that eLabFTW exposes at
 `GET /storage_units` without parameters — it lists *containers*, not units.
@@ -41,7 +41,8 @@ end
     get_storage_unit(id::Int) -> Dict
 
 Retrieve a single storage unit by ID. Returns `id`, `name`, `parent_id`,
-`full_path`, and `level_depth`.
+`full_path`, `capacity` (`nothing` means unlimited), `occupancy` (containers
+stored directly in the unit), and `level_depth`.
 """
 function get_storage_unit(id::Int)
     _check_enabled()
@@ -51,38 +52,48 @@ function get_storage_unit(id::Int)
 end
 
 """
-    create_storage_unit(; name, parent_id=nothing) -> Int
+    create_storage_unit(; name, parent_id=nothing, capacity=nothing) -> Int
 
 Create a storage unit. Returns the new unit's ID. Pass `parent_id` to nest
-under an existing unit; omit it for a root-level unit.
+under an existing unit; omit it for a root-level unit. Pass `capacity` to cap
+the number of containers the unit holds directly (`0` for a unit that only
+holds other units); omit it for unlimited.
 
 # Example
 ```julia
 freezer = create_storage_unit(name="Freezer A")
-drawer1 = create_storage_unit(name="Drawer 1", parent_id=freezer)
+drawer1 = create_storage_unit(name="Drawer 1", parent_id=freezer, capacity=96)
 ```
 """
-function create_storage_unit(; name::String, parent_id::Union{Int, Nothing}=nothing)
+function create_storage_unit(; name::String, parent_id::Union{Int, Nothing}=nothing,
+    capacity::Union{Int, Nothing}=nothing)
     _check_enabled()
     url = "$(_elabftw_config.url)/api/v2/storage_units"
     payload = Dict{String, Any}("name" => name)
     !isnothing(parent_id) && (payload["parent_id"] = parent_id)
+    !isnothing(capacity) && (payload["capacity"] = capacity)
     response = _elabftw_post(url, payload)
     return _parse_id_from_response(response)
 end
 
 """
-    update_storage_unit(id::Int; name=nothing, parent_id=nothing)
+    update_storage_unit(id::Int; name=nothing, parent_id=nothing, capacity=nothing)
 
-Update a storage unit's name and/or parent. At least one field must be provided.
+Update a storage unit's name, parent, and/or capacity. At least one field must
+be provided.
 
 # Arguments
 - `name::String` — New name for the storage unit.
 - `parent_id::Int` — New parent unit ID. Cannot be the unit itself or any
   of its descendants.
+- `capacity::Int` — Maximum number of containers the unit holds directly
+  (`0` for a unit that only holds other units). May be set below the current
+  occupancy. Resetting a unit to unlimited needs an explicit `null` and
+  cannot be expressed here; use the `elabftw_http` escape hatch.
 
 # Example
 ```julia
+update_storage_unit(5; capacity=96)
 update_storage_unit(5; name="Freezer B")
 update_storage_unit(5; parent_id=2)
 update_storage_unit(5; name="Freezer B", parent_id=2)
@@ -91,14 +102,16 @@ update_storage_unit(5; name="Freezer B", parent_id=2)
 function update_storage_unit(id::Int;
     name::Union{String, Nothing}=nothing,
     parent_id::Union{Int, Nothing}=nothing,
+    capacity::Union{Int, Nothing}=nothing,
 )
     _check_enabled()
-    all(isnothing, (name, parent_id)) &&
-        throw(ArgumentError("update_storage_unit: specify at least one of name, parent_id"))
+    all(isnothing, (name, parent_id, capacity)) &&
+        throw(ArgumentError("update_storage_unit: specify at least one of name, parent_id, capacity"))
     url = "$(_elabftw_config.url)/api/v2/storage_units/$id"
     payload = Dict{String, Any}()
     isnothing(name) || (payload["name"] = name)
     isnothing(parent_id) || (payload["parent_id"] = parent_id)
+    isnothing(capacity) || (payload["capacity"] = capacity)
     _elabftw_patch(url, payload)
     return nothing
 end
@@ -210,6 +223,7 @@ cid = create_container(:items, 42; storage_id=7, qty_stored=50, qty_unit="mL")
 ```
 
 # Throws
+- `ClientError` (400) — the storage unit has a `capacity` and is already full.
 - `ParseError` — the POST succeeded but the follow-up listing has no row
   matching `storage_id`. Indicates server behavior has drifted; open an issue.
 """
@@ -237,8 +251,7 @@ function create_container(
 end
 
 """
-<<<<<<< HEAD
-    update_container(entity_type, entity_id, container_id; qty_stored, qty_unit, storage_id)
+    update_container(entity_type, entity_id, container_id; qty_stored=nothing, qty_unit=nothing, storage_id=nothing)
 
 Update a container's quantity, unit, and/or storage location. Only fields
 you pass are sent; a call with no updates is a no-op.
@@ -246,14 +259,9 @@ you pass are sent; a call with no updates is a no-op.
 Pass `storage_id` to move the container to a different storage unit while
 preserving the container row's `id` and `created_at`. Requires write access
 on the parent entity (and `can_manage_inventory_locations` when the instance
-has `inventory_require_edit_rights=1`).
-=======
-    update_container(entity_type, entity_id, container_id; qty_stored=nothing, qty_unit=nothing, storage_id=nothing)
-
-Update a container's quantity, unit, and/or storage location. Only fields you
-pass are sent; a call with no updates is a no-op. Setting `storage_id` moves
-the container to a different storage unit while preserving its `id`.
->>>>>>> 46509e1 (Sync eLabFTW API 5.6.11)
+has `inventory_require_edit_rights=1`). A move is rejected with a
+`ClientError` (400) when the destination unit has a `capacity` and is
+already full.
 """
 function update_container(
     entity_type::Symbol,
@@ -278,7 +286,11 @@ end
 """
     delete_container(entity_type::Symbol, entity_id::Int, container_id::Int)
 
-Remove an entity's storage assignment.
+Remove an entity's storage assignment. Takes no body.
+
+If the team that owns the entity has `capture_container_deletion_reason`
+enabled, the server rejects this with a `ClientError` (400); use
+[`destroy_container`](@ref) instead, which supplies a deletion reason.
 """
 function delete_container(entity_type::Symbol, entity_id::Int, container_id::Int)
     _check_enabled()
@@ -286,4 +298,47 @@ function delete_container(entity_type::Symbol, entity_id::Int, container_id::Int
     url = "$(_elabftw_config.url)/api/v2/$etype/$entity_id/containers/$container_id"
     _elabftw_delete(url)
     return nothing
+end
+
+"""
+    destroy_container(entity_type, entity_id, container_id; deletion_reason=nothing, deletion_comment=nothing)
+
+Remove an entity's storage assignment, recording why. Sends
+`PATCH .../containers/{id}` with `action: destroy`. Required instead of
+[`delete_container`](@ref) when the owning team has
+`capture_container_deletion_reason` enabled; the reason is then recorded in
+the parent entity's changelog. Requires an eLabFTW server running 6.x or later.
+
+# Arguments
+- `deletion_reason::Int` — one of `10` used up in authorised work, `20` no
+  longer required, `30` consent withdrawn or use prohibited, `40` approval or
+  retention period ended, `50` shelf life exceeded, `60` unsuitable for
+  intended use, `70` contaminated, `80` storage or transport incident,
+  `90` collected or registered in error, `100` other. Mandatory when the team
+  captures deletion reasons.
+- `deletion_comment::String` — free text (at most 255 characters, longer is
+  rejected). Mandatory when `deletion_reason` is `100`.
+
+Returns the container as it was just before removal.
+
+# Example
+```julia
+destroy_container(:items, 42, cid; deletion_reason=70, deletion_comment="spilled in transit")
+```
+"""
+function destroy_container(
+    entity_type::Symbol,
+    entity_id::Int,
+    container_id::Int;
+    deletion_reason::Union{Int, Nothing}=nothing,
+    deletion_comment::Union{String, Nothing}=nothing,
+)
+    _check_enabled()
+    etype = String(entity_type)
+    url = "$(_elabftw_config.url)/api/v2/$etype/$entity_id/containers/$container_id"
+    payload = Dict{String, Any}("action" => "destroy")
+    isnothing(deletion_reason) || (payload["deletion_reason"] = deletion_reason)
+    isnothing(deletion_comment) || (payload["deletion_comment"] = deletion_comment)
+    response = _elabftw_patch(url, payload)
+    return JSON.parse(String(response.body))
 end

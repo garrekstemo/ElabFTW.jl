@@ -26,6 +26,7 @@ get_container
 create_container
 update_container
 delete_container
+destroy_container
 ```
 
 ## Notes on eLabFTW's storage API
@@ -35,8 +36,10 @@ A few quirks worth knowing:
 - `GET /storage_units` (what `list_storage_units()` calls with no arguments)
   returns **container assignments**, not the list of units. Pass
   `hierarchy=true` to get the unit tree.
-- `PATCH` on a storage unit accepts `name`, `parent_id`, or both (at least
-  one is required). Pass `parent_id` to reparent a unit (and everything under
+- `PATCH` on a storage unit accepts `name`, `parent_id`, `capacity`, or any
+  combination (at least one is required). `capacity` caps the containers a
+  unit holds directly; creating or moving a container into a full unit fails
+  with a 400. Pass `parent_id` to reparent a unit (and everything under
   it) in place. Use the `elabftw_http` escape hatch to move a unit to the
   root (`parent_id: null` cannot be expressed as a Julia `Int`).
 - The `qty_unit` field is stored as a free-form string truncated to 10

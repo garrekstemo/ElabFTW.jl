@@ -45,6 +45,8 @@ function _patch_action(
     action::String;
     passphrase::Union{String, Nothing}=nothing,
     meaning::Union{Int, Nothing}=nothing,
+    userid::Union{Int, Nothing}=nothing,
+    team::Union{Int, Nothing}=nothing,
 )
     _check_enabled()
     etype = String(entity_type)
@@ -52,6 +54,8 @@ function _patch_action(
     payload = Dict{String, Any}("action" => action)
     isnothing(passphrase) || (payload["passphrase"] = passphrase)
     isnothing(meaning) || (payload["meaning"] = meaning)
+    isnothing(userid) || (payload["userid"] = userid)
+    isnothing(team) || (payload["team"] = team)
     response = _elabftw_patch(url, payload)
     return JSON.parse(String(response.body))
 end
@@ -197,4 +201,42 @@ function sign_item(id::Int;
 )
     _patch_action(:items, id, "sign";
         passphrase=String(passphrase), meaning=_resolve_meaning(meaning))
+end
+
+"""
+    transfer_experiment_owner(id::Int; userid::Int, team::Int)
+
+Transfer ownership of an experiment to user `userid` in team `team` via the
+`updateowner` action; its uploads move with it. Returns `nothing`: the server
+sends no record back, since the caller may lose read access once the
+experiment changes hands. Requires an eLabFTW server running 6.x or later.
+
+Only an admin of the experiment's team or a sysadmin may transfer ownership
+(as of eLabFTW 6.0.5); anyone else gets a [`PermissionError`](@ref). The new
+owner must be a member of `team`, otherwise the server answers with a
+[`ClientError`](@ref) (422).
+
+Since eLabFTW 6.0 this is the only way to change the owner of an existing
+entity; sending `userid`/`team` through [`update_experiment`](@ref) is
+rejected with a `ClientError` (400).
+
+# Example
+```julia
+transfer_experiment_owner(42; userid=21, team=5)
+```
+"""
+function transfer_experiment_owner(id::Int; userid::Int, team::Int)
+    _patch_action(:experiments, id, "updateowner"; userid=userid, team=team)
+    return nothing
+end
+
+"""
+    transfer_item_owner(id::Int; userid::Int, team::Int)
+
+Transfer ownership of an item (resource). Returns `nothing`. See
+[`transfer_experiment_owner`](@ref).
+"""
+function transfer_item_owner(id::Int; userid::Int, team::Int)
+    _patch_action(:items, id, "updateowner"; userid=userid, team=team)
+    return nothing
 end

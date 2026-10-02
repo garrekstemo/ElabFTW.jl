@@ -86,6 +86,8 @@ function storage_unit_view(state::MockState, unit::Dict; include_children::Bool=
         "name" => unit["name"],
         "parent_id" => unit["parent_id"],
         "full_path" => storage_unit_full_path(state, unit),
+        "capacity" => get(unit, "capacity", nothing),
+        "occupancy" => count(c -> c["storage_id"] == unit["id"], values(state.containers)),
         "level_depth" => storage_unit_depth(state, unit),
     )
     if include_children
@@ -257,6 +259,14 @@ function apply_action!(entity::Dict, data::Dict)
         entity["signed"] = 1
         entity["meaning"] = data["meaning"]
         return json_response(entity_view(entity))
+    elseif action == "updateowner"
+        (haskey(data, "userid") && haskey(data, "team")) ||
+            return HTTP.Response(400, "userid and team are required")
+        entity["userid"] = data["userid"]
+        entity["team"] = data["team"]
+        # Real server skips the read-back (the caller may lose read access
+        # after the transfer) and returns an empty array.
+        return json_response(Any[])
     end
     return HTTP.Response(400, "unknown action: $action")
 end
@@ -512,6 +522,10 @@ function route(state::MockState, method::String, rest::Vector{String}, req::HTTP
             if haskey(data, "action")
                 return apply_action!(entity, data)
             end
+            # eLabFTW 6.0+ moves ownership only through action=updateowner and
+            # rejects ownership fields on a plain update.
+            (haskey(data, "userid") || haskey(data, "team")) &&
+                return HTTP.Response(400, "Use the 'action:updateowner' to transfer ownership.")
             # Snapshot a revision whenever `body` is being replaced with a
             # different value — matches the real server's "on meaningful edit"
             # behavior without trying to emulate min_days/min_delta config.
@@ -767,6 +781,7 @@ function route_storage_units(state::MockState, method::String, rest::Vector{Stri
             state.storage_units[id] = Dict{String, Any}(
                 "id" => id, "name" => name,
                 "parent_id" => get(data, "parent_id", nothing),
+                "capacity" => get(data, "capacity", nothing),
             )
             return created_response("/api/v2/storage_units/$id")
         end
@@ -789,6 +804,7 @@ function route_storage_units(state::MockState, method::String, rest::Vector{Stri
             if haskey(data, "parent_id")
                 unit["parent_id"] = data["parent_id"]
             end
+            haskey(data, "capacity") && (unit["capacity"] = data["capacity"])
             return json_response(storage_unit_view(state, unit))
         elseif method == "DELETE"
             isnothing(unit) && return not_found()
@@ -1069,6 +1085,11 @@ function route_subresource(state::MockState, method::String, entity::Dict, colle
                 storage_id = subid
                 haskey(state.storage_units, storage_id) ||
                     return HTTP.Response(400, "storage unit not found")
+                cap = get(state.storage_units[storage_id], "capacity", nothing)
+                if !isnothing(cap) &&
+                   count(c -> c["storage_id"] == storage_id, values(state.containers)) >= cap
+                    return HTTP.Response(400, "storage unit is full")
+                end
                 qty_stored = get(data, "qty_stored", nothing)
                 isnothing(qty_stored) && return HTTP.Response(400, "qty_stored required")
                 qty_unit = String(get(data, "qty_unit", ""))
@@ -1091,6 +1112,11 @@ function route_subresource(state::MockState, method::String, entity::Dict, colle
                 row = get(state.containers, subid, nothing)
                 isnothing(row) && return not_found()
                 data = parse_json_body(req)
+                if get(data, "action", "update") == "destroy"
+                    view = container_single_view(row)
+                    delete!(state.containers, subid)
+                    return json_response(view)
+                end
                 haskey(data, "qty_stored") && (row["qty_stored"] = string(data["qty_stored"]))
                 if haskey(data, "qty_unit")
                     u = String(data["qty_unit"])
@@ -1101,6 +1127,11 @@ function route_subresource(state::MockState, method::String, entity::Dict, colle
                     new_sid = Int(data["storage_id"])
                     haskey(state.storage_units, new_sid) ||
                         return HTTP.Response(400, "storage unit not found")
+                    cap = get(state.storage_units[new_sid], "capacity", nothing)
+                    if !isnothing(cap) && new_sid != row["storage_id"] &&
+                       count(c -> c["storage_id"] == new_sid, values(state.containers)) >= cap
+                        return HTTP.Response(400, "storage unit is full")
+                    end
                     row["storage_id"] = new_sid
                 end
                 return json_response(container_single_view(row))

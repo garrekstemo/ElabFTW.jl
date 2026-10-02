@@ -6,6 +6,35 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+Syncs the client to eLabFTW API v2 6.0.5 (from 5.6.11).
+
+### Added
+
+- `capacity` keyword on `create_storage_unit` and `update_storage_unit`.
+  Storage units now also report `capacity` and `occupancy`.
+- `destroy_container` wrapping `PATCH .../containers/{id}` with
+  `action: destroy` and a `deletion_reason` / `deletion_comment`. Required
+  instead of `delete_container` when a team enables
+  `capture_container_deletion_reason`.
+- `transfer_experiment_owner` and `transfer_item_owner` wrapping the new
+  `updateowner` PATCH action (`userid` and `team`). They return `nothing`, as
+  the server sends no record back.
+
+### Changed
+
+- **Breaking (server-side):** eLabFTW 6.0 only transfers ownership of an
+  existing entity through the `updateowner` action, which requires an admin
+  of the entity's team or a sysadmin. Passing `userid`/`team` to
+  `update_experiment`/`update_item` is now rejected with a 400
+  (`ClientError`). Use the new `transfer_*_owner` functions.
+- Creating a container in a full storage unit (`create_container`) or moving
+  one there (`update_container` with `storage_id`) is rejected by the server
+  with a 400 (`ClientError`).
+- Fixed unresolved merge-conflict markers in `src/storage.jl` that were left
+  in the `update_container` docstring.
+
 ## [0.3.0] - 2026-09-03
 
 Syncs the client to eLabFTW API v2 5.6.11 (from 5.5.12).

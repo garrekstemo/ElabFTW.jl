@@ -35,6 +35,24 @@
         delete_item(iid)
     end
 
+    @testset "Transfer ownership" begin
+        eid = create_experiment(title="owner-exp")
+        @test transfer_experiment_owner(eid; userid=21, team=5) === nothing
+        e = get_experiment(eid)
+        @test e["userid"] == 21
+        @test e["team"] == 5
+        # 6.0+ rejects ownership fields on a plain update
+        @test_throws ClientError update_experiment(eid; userid=22)
+        delete_experiment(eid)
+
+        iid = create_item(title="owner-item")
+        @test transfer_item_owner(iid; userid=22, team=6) === nothing
+        i = get_item(iid)
+        @test i["userid"] == 22
+        @test i["team"] == 6
+        delete_item(iid)
+    end
+
     @testset "Timestamp" begin
         eid = create_experiment(title="ts-exp")
         r = timestamp_experiment(eid)
