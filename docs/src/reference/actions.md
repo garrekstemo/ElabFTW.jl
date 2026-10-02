@@ -22,6 +22,13 @@ force_lock_item
 force_unlock_item
 ```
 
+## Transfer ownership
+
+```@docs
+transfer_experiment_owner
+transfer_item_owner
+```
+
 ## Timestamp (RFC 3161)
 
 ```@docs

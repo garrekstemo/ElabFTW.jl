@@ -30,6 +30,9 @@ _None — all API endpoints covered._
 - [ ] **IdPs + IdPs sources** — `/idps`, `/idps_sources` SAML management
 - [ ] **Reports** — `GET /reports?format=csv|json&scope=...`
 - [ ] **DSpace** — `/dspace` submission integration
+- [ ] **RORs** — `/instance/rors`, `/teams/{id}/rors`, `/users/{id}/rors`
+      (new in eLabFTW 6.0; list/associate/remove Research Organization Registry
+      IDs; sysadmin/admin-level, so deferred with the other admin surface)
 - [ ] **User uploads** — `GET /users/{id}/uploads` per-user attachment listing
 
 ## Bugs & known issues

@@ -45,6 +45,8 @@ function _patch_action(
     action::String;
     passphrase::Union{String, Nothing}=nothing,
     meaning::Union{Int, Nothing}=nothing,
+    userid::Union{Int, Nothing}=nothing,
+    team::Union{Int, Nothing}=nothing,
 )
     _check_enabled()
     etype = String(entity_type)
@@ -52,6 +54,8 @@ function _patch_action(
     payload = Dict{String, Any}("action" => action)
     isnothing(passphrase) || (payload["passphrase"] = passphrase)
     isnothing(meaning) || (payload["meaning"] = meaning)
+    isnothing(userid) || (payload["userid"] = userid)
+    isnothing(team) || (payload["team"] = team)
     response = _elabftw_patch(url, payload)
     return JSON.parse(String(response.body))
 end
@@ -198,3 +202,32 @@ function sign_item(id::Int;
     _patch_action(:items, id, "sign";
         passphrase=String(passphrase), meaning=_resolve_meaning(meaning))
 end
+
+"""
+    transfer_experiment_owner(id::Int; userid::Int, team::Int) -> Dict
+
+Transfer ownership of an experiment to another user via the `updateowner`
+action. Both `userid` and `team` are required; the new owner must belong to
+the destination team, and non-admin users can only transfer within their
+current team. Returns the updated experiment record. Requires an eLabFTW
+server running 6.x or later.
+
+Since eLabFTW 6.0 this is the only way to change the owner of an existing
+entity; sending `userid`/`team` through [`update_experiment`](@ref) no longer
+transfers ownership.
+
+# Example
+```julia
+transfer_experiment_owner(42; userid=21, team=5)
+```
+"""
+transfer_experiment_owner(id::Int; userid::Int, team::Int) =
+    _patch_action(:experiments, id, "updateowner"; userid=userid, team=team)
+
+"""
+    transfer_item_owner(id::Int; userid::Int, team::Int) -> Dict
+
+Transfer ownership of an item (resource). See [`transfer_experiment_owner`](@ref).
+"""
+transfer_item_owner(id::Int; userid::Int, team::Int) =
+    _patch_action(:items, id, "updateowner"; userid=userid, team=team)

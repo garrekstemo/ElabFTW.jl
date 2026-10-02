@@ -133,6 +133,7 @@ export lock_experiment, pin_experiment, timestamp_experiment, sign_experiment
 export lock_item, pin_item, timestamp_item, sign_item
 export force_lock_experiment, force_unlock_experiment
 export force_lock_item, force_unlock_item
+export transfer_experiment_owner, transfer_item_owner
 export SIGN_MEANING
 
 # Cross-entity links
@@ -174,7 +175,7 @@ export link_compound, list_compound_links
 export list_storage_units, get_storage_unit, create_storage_unit
 export update_storage_unit, rename_storage_unit, delete_storage_unit
 export list_containers, get_container, create_container
-export update_container, delete_container
+export update_container, delete_container, destroy_container
 
 # Revisions
 export list_revisions, get_revision, restore_revision

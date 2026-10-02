@@ -83,6 +83,37 @@
         delete_item(item_id)
     end
 
+    @testset "Capacity and destroy_container" begin
+        item_id = create_item(title="Capacity item")
+        small = create_storage_unit(name="Tiny box", capacity=1)
+        other = create_storage_unit(name="Big box")
+        @test get_storage_unit(small)["capacity"] == 1
+        @test get_storage_unit(other)["capacity"] === nothing
+
+        cid = create_container(:items, item_id; storage_id=other, qty_stored=1, qty_unit="g")
+        @test get_storage_unit(other)["occupancy"] == 1
+
+        update_container(:items, item_id, cid; storage_id=small)
+        @test get_storage_unit(small)["occupancy"] == 1
+
+        cid2 = create_container(:items, item_id; storage_id=other, qty_stored=2, qty_unit="g")
+        @test_throws ClientError update_container(:items, item_id, cid2; storage_id=small)
+
+        update_storage_unit(small; capacity=5)
+        @test get_storage_unit(small)["capacity"] == 5
+        update_container(:items, item_id, cid2; storage_id=small)
+
+        row = destroy_container(:items, item_id, cid;
+            deletion_reason=100, deletion_comment="spilled")
+        @test row["id"] == cid
+        @test_throws NotFoundError get_container(:items, item_id, cid)
+        delete_container(:items, item_id, cid2)
+
+        delete_storage_unit(small)
+        delete_storage_unit(other)
+        delete_item(item_id)
+    end
+
     @testset "Containers on experiments" begin
         exp_id = create_experiment(title="Stored experiment")
         unit_id = create_storage_unit(name="Shelf X")

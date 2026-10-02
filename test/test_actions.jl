@@ -35,6 +35,20 @@
         delete_item(iid)
     end
 
+    @testset "Transfer ownership" begin
+        eid = create_experiment(title="owner-exp")
+        r = transfer_experiment_owner(eid; userid=21, team=5)
+        @test r["userid"] == 21
+        @test r["team"] == 5
+        delete_experiment(eid)
+
+        iid = create_item(title="owner-item")
+        r = transfer_item_owner(iid; userid=22, team=6)
+        @test r["userid"] == 22
+        @test r["team"] == 6
+        delete_item(iid)
+    end
+
     @testset "Timestamp" begin
         eid = create_experiment(title="ts-exp")
         r = timestamp_experiment(eid)
