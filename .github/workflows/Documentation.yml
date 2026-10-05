@@ -4,6 +4,12 @@ on:
     branches: [main]
     tags: ['*']
   pull_request:
+# A new push to a PR cancels that PR's older preview build. main runs queue
+# behind each other, and each tag gets its own group, so a tag deploy is never
+# dropped (one group for everything would let a newer run replace a pending one).
+concurrency:
+  group: docs-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
   docs:
     runs-on: ubuntu-latest
@@ -21,4 +27,14 @@ jobs:
       - name: Build and deploy
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: julia --project=docs docs/make.jl
+        # PR previews, main and tag runs all push to gh-pages, so a push can be
+        # rejected when another run pushed first. Rebuild and retry in that
+        # case (deploydocs re-clones gh-pages); fail at once on anything else.
+        run: |
+          for attempt in 1 2 3; do
+            julia --project=docs docs/make.jl 2>&1 | tee make.log && exit 0
+            grep -q "Failed to push" make.log || exit 1
+            echo "gh-pages push rejected (attempt $attempt of 3); retrying"
+            sleep $((attempt * 15))
+          done
+          exit 1
