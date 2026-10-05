@@ -312,7 +312,7 @@ list_item_steps(id::Int) = _list_entity_steps("items", id)
 """
     finish_item_step(id::Int, step_id::Int)
 
-Mark an item step as finished.
+Toggle an item step's finished state. See [`finish_step`](@ref).
 """
 finish_item_step(id::Int, step_id::Int) = _finish_entity_step("items", id, step_id)
 

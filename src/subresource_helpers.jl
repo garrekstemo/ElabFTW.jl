@@ -128,7 +128,7 @@ end
 function _finish_entity_step(entity_type::String, id::Int, step_id::Int)
     _check_enabled()
     url = "$(_elabftw_config.url)/api/v2/$entity_type/$id/steps/$step_id"
-    _elabftw_patch(url, Dict("finished" => true))
+    _elabftw_patch(url, Dict{String, Any}("action" => "finish"))
     return nothing
 end
 

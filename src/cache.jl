@@ -28,7 +28,7 @@ function download_item_upload(item_id::Int, upload_id::Int; filename::String="")
     end
 
     # Download from eLabFTW
-    url = "$(_elabftw_config.url)/api/v2/items/$item_id/uploads/$upload_id"
+    url = "$(_elabftw_config.url)/api/v2/items/$item_id/uploads/$upload_id?format=binary"
     response = _elabftw_request(url; accept="application/octet-stream")
 
     # Ensure directory exists
@@ -54,7 +54,7 @@ function download_experiment_upload(experiment_id::Int, upload_id::Int; filename
         return cache_path
     end
 
-    url = "$(_elabftw_config.url)/api/v2/experiments/$experiment_id/uploads/$upload_id"
+    url = "$(_elabftw_config.url)/api/v2/experiments/$experiment_id/uploads/$upload_id?format=binary"
     response = _elabftw_request(url; accept="application/octet-stream")
 
     mkpath(dirname(cache_path))
