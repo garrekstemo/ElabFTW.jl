@@ -41,6 +41,33 @@ end
     @test any(t -> t["tag"] == "mock-tag", tags)
 end
 
+@testset "log_to_elab from template" begin
+    tmpl = create_experiment_template(title="Log template", body="Template body")
+    elabftw_http("PATCH", "/api/v2/experiments_templates/$tmpl";
+        body=Dict("metadata" => ElabFTW.JSON.json(Dict("extra_fields" =>
+            Dict("Sample" => Dict("type" => "text", "value" => ""))))))
+
+    id = log_to_elab(title="Templated log", body="Analysis body", template=tmpl,
+                     metadata=Dict("fit" => Dict("r2" => 0.99),
+                                   "extra_fields" => Dict("Sample" => Dict("value" => "ZIF-62"))),
+                     tags=["tmpl-log"])
+    exp = get_experiment(id)
+    @test exp["title"] == "Templated log"
+    @test exp["body"] == "Analysis body"
+    md = ElabFTW.JSON.parse(exp["metadata"])
+    @test md["extra_fields"]["Sample"]["type"] == "text"     # template schema kept
+    @test md["extra_fields"]["Sample"]["value"] == "ZIF-62"  # caller value filled in
+    @test md["fit"]["r2"] == 0.99                            # non-extra_fields key added
+    @test any(t -> t["tag"] == "tmpl-log", list_experiment_tags(id))
+
+    # Empty body keeps the template's body
+    id2 = log_to_elab(title="Templated log 2", template=tmpl)
+    @test get_experiment(id2)["body"] == "Template body"
+
+    delete_experiment(id); delete_experiment(id2)
+    delete_experiment_template(tmpl)
+end
+
 @testset "log_to_elab update path + attachment replace" begin
     # log_to_elab uses the running script's dirname for .elab_id. Tests
     # run with PROGRAM_FILE empty, so point it at a real file in a tempdir.

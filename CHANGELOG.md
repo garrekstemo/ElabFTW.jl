@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- `template` keyword on `log_to_elab`, for teams that only allow creating
+  experiments from a template. The first run copies the template, then sets
+  `body` and `category` (which the server ignores when copying). `metadata`
+  values under `extra_fields` fill in the template's fields; other top-level
+  keys, which the server drops when copying, are added with a follow-up
+  update.
+
 ## [0.3.2] - 2026-10-05
 
 ### Fixed
