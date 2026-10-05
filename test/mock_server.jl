@@ -490,6 +490,31 @@ function route(state::MockState, method::String, rest::Vector{String}, req::HTTP
             end
             rejected = reject_nonstring_metadata(data)
             isnothing(rejected) || return rejected
+            if collection == "experiments" && haskey(data, "template")
+                # Real server copies the template and takes only `title` and
+                # `metadata` from the request; `body` and `category` are
+                # ignored. Like MetadataHelpers::mergeMetadata, only
+                # `extra_fields` merge (template keeps existing field
+                # definitions, takes their values); other keys are dropped.
+                tmpl = get(state.collections["experiments_templates"], Int(data["template"]), nothing)
+                isnothing(tmpl) && return not_found()
+                md = tmpl["metadata"]
+                if haskey(data, "metadata")
+                    base = Dict{String, Any}(isnothing(md) ? Dict() : JSON.parse(md))
+                    fields = Dict{String, Any}(get(base, "extra_fields", Dict()))
+                    for (name, f) in get(JSON.parse(data["metadata"]), "extra_fields", Dict())
+                        if haskey(fields, name)
+                            haskey(f, "value") && (fields[name] = merge(Dict{String, Any}(fields[name]), Dict("value" => f["value"])))
+                        else
+                            fields[name] = f
+                        end
+                    end
+                    base["extra_fields"] = fields
+                    md = JSON.json(base)
+                end
+                data = Dict{String, Any}("title" => get(data, "title", tmpl["title"]),
+                    "body" => tmpl["body"], "category" => tmpl["category"], "metadata" => md)
+            end
             id = create_entity!(state, collection, data)
             return created_response("/api/v2/$collection/$id")
         end

@@ -32,6 +32,17 @@ Run the script ten times — you still have one experiment, and its body, tags, 
 
 `log_to_elab` detects re-runs by matching the `title` against the `.elab_id` file. Changing the title mid-project will create a second experiment; pick a title you're happy with before the first run.
 
+If your team only allows creating experiments from a template, pass `template` with an experiment template ID. The first run copies that template; `metadata` values under `extra_fields` fill in the template's fields:
+
+```julia
+id = log_to_elab(
+    title    = "FTIR: CN stretch fit",
+    body     = results_md,
+    template = 603,
+    metadata = Dict("extra_fields" => Dict("Sample" => Dict("value" => "NH4SCN/DMF"))),
+)
+```
+
 ## Forcing a Fresh Entry
 
 To split off a new experiment — for example, when you start a follow-up analysis in the same directory — either:

@@ -58,13 +58,20 @@ end
 # =============================================================================
 
 """
-    log_to_elab(; title, body, content_type, attachments, tags, category, metadata) -> Int
+    log_to_elab(; title, body, content_type, attachments, tags, category, metadata, template) -> Int
 
 Log analysis results to eLabFTW. Idempotent: if a `.elab_id` file exists next
 to the running script with a matching title, updates the existing experiment
 instead of creating a new one.
 
 `body` is sent with `content_type` — `2` = Markdown (default), `1` = HTML.
+
+Pass `template` (an experiment template ID) when the team only allows
+creating experiments from a template. The new experiment copies the template,
+and a non-empty `body` or a `category` replaces the template's. `metadata` is
+merged into the template's: values under `extra_fields` fill the template's
+fields (the template keeps their definitions), and other top-level keys are
+added. `template` is only used on the first run.
 
 Returns the experiment ID.
 
@@ -89,6 +96,9 @@ log_to_elab(title="FTIR: CN stretch fit", body="Results here")
 # Re-run: updates the existing experiment
 log_to_elab(title="FTIR: CN stretch fit", body="Updated results",
             attachments=["fit_results.csv"], tags=["ftir"])
+
+# Team requires templates: create from template 603
+log_to_elab(title="FTIR: CN stretch fit", body="Results here", template=603)
 ```
 """
 function log_to_elab(;
@@ -98,7 +108,8 @@ function log_to_elab(;
     attachments::Vector{String} = String[],
     tags::Vector{String} = String[],
     category::Union{Int, Nothing} = nothing,
-    metadata::Union{Dict, AbstractString, Nothing} = nothing
+    metadata::Union{Dict, AbstractString, Nothing} = nothing,
+    template::Union{Int, Nothing} = nothing
 )
     existing = _read_elab_id()
 
@@ -116,7 +127,28 @@ function log_to_elab(;
         @info "eLabFTW: updated experiment" id url=exp_url
     else
         # Create new experiment
-        id = create_experiment(; title=title, body=body, content_type=content_type, category=category, metadata=metadata)
+        if isnothing(template)
+            id = create_experiment(; title=title, body=body, content_type=content_type, category=category, metadata=metadata)
+        else
+            # When copying a template the server ignores `body` and
+            # `category`, and merges only `extra_fields` from `metadata`.
+            # Set the rest with a follow-up update.
+            id = _create_entity("experiments"; template=template, title=title, metadata=metadata)
+            overrides = Dict{Symbol, Any}()
+            isempty(body) || (overrides[:body] = body; overrides[:content_type] = content_type)
+            isnothing(category) || (overrides[:category] = category)
+            md = metadata isa AbstractString ? JSON.parse(metadata) : metadata
+            extra = isnothing(md) ? nothing : filter(p -> String(p.first) != "extra_fields", md)
+            if !isnothing(extra) && !isempty(extra)
+                current = get_experiment(id)["metadata"]
+                merged = Dict{String, Any}(isnothing(current) ? Dict() : JSON.parse(current))
+                for (k, v) in extra
+                    merged[String(k)] = v
+                end
+                overrides[:metadata] = merged
+            end
+            isempty(overrides) || update_experiment(id; overrides...)
+        end
         for filepath in attachments
             upload_to_experiment(id, filepath; comment=basename(filepath))
         end
