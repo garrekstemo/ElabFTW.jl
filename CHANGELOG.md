@@ -6,6 +6,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- `finish_step` / `finish_item_step` sent `{"finished": true}`, which the
+  server rejects with a 400 ("Incorrect parameter for steps"). They now send
+  `action: finish`. The server action is a toggle: calling it on a finished
+  step reopens it.
+- `download_experiment_upload` / `download_item_upload` saved the upload's
+  JSON metadata instead of the file. The server ignores the `Accept` header;
+  they now request `?format=binary`.
+- The mock server now matches the real server for both behaviors, and step
+  `finished` values are `0`/`1` integers as the server returns them.
+- `test/test_live.jl` checks links by `entityid`, and reads an optional
+  `ELABFTW_TEMPLATE_ID` for teams that require templates to create experiments.
+
 ## [0.3.1] - 2026-10-02
 
 Syncs the client to eLabFTW API v2 6.0.5 (from 5.6.11).

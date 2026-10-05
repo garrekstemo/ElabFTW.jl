@@ -92,12 +92,16 @@
         steps = list_steps(id)
         @test length(steps) == 2
         @test steps[1]["body"] == "Load data"
-        @test steps[1]["finished"] == false
+        @test steps[1]["finished"] == 0
 
         finish_step(id, s1)
         steps = list_steps(id)
         finished_step = first(filter(s -> s["id"] == s1, steps))
-        @test finished_step["finished"] == true
+        @test finished_step["finished"] == 1
+
+        # `finish` is a toggle: a second call reopens the step
+        finish_step(id, s1)
+        @test first(filter(s -> s["id"] == s1, list_steps(id)))["finished"] == 0
 
         delete_step(id, s2)
         steps = list_steps(id)

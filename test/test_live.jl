@@ -5,7 +5,9 @@ Run manually against a configured eLabFTW instance:
 
     julia --project=. test/test_live.jl
 
-Requires ELABFTW_URL and ELABFTW_API_KEY environment variables.
+Requires ELABFTW_URL and ELABFTW_API_KEY environment variables. If your team
+only allows creating experiments from a template, also set
+ELABFTW_TEMPLATE_ID to an experiment template the key's user can read.
 Creates temporary experiments and items, exercises the API, then cleans up.
 """
 
@@ -37,9 +39,10 @@ try
 
             @testset "Setup: create test experiment" begin
                 global experiment_id
-                experiment_id = create_experiment(
-                    title = "QPSTools.jl API test — safe to delete"
-                )
+                title = "QPSTools.jl API test — safe to delete"
+                experiment_id = haskey(ENV, "ELABFTW_TEMPLATE_ID") ?
+                    create_from_template(parse(Int, ENV["ELABFTW_TEMPLATE_ID"]); title=title) :
+                    create_experiment(title=title)
                 @test experiment_id isa Int
                 println("Created test experiment #$experiment_id")
             end
@@ -142,7 +145,7 @@ try
 
                 finish_item_step(item_id, s1)
                 steps = list_item_steps(item_id)
-                @test any(s -> get(s, "finished", false), steps)
+                @test any(s -> s["id"] == s1 && s["finished"] == 1, steps)
             end
 
             @testset "List and search items" begin
@@ -161,13 +164,13 @@ try
             @testset "Link experiment to item" begin
                 link_experiment_to_item(experiment_id, item_id)
                 links = list_experiment_item_links(experiment_id)
-                @test any(l -> get(l, "itemid", get(l, "id", -1)) == item_id, links)
+                @test any(l -> l["entityid"] == item_id, links)
             end
 
             @testset "Unlink experiment from item" begin
                 unlink_experiment_from_item(experiment_id, item_id)
                 links = list_experiment_item_links(experiment_id)
-                @test !any(l -> get(l, "itemid", get(l, "id", -1)) == item_id, links)
+                @test !any(l -> l["entityid"] == item_id, links)
             end
 
             @testset "Experiment-to-experiment links" begin

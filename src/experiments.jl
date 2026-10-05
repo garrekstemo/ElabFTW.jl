@@ -430,7 +430,7 @@ List all steps for an experiment.
 ```julia
 steps = list_steps(42)
 for step in steps
-    status = get(step, "finished", false) ? "done" : "todo"
+    status = step["finished"] == 1 ? "done" : "todo"
     println("[", status, "] ", step["body"])
 end
 ```
@@ -440,7 +440,8 @@ list_steps(id::Int) = _list_entity_steps("experiments", id)
 """
     finish_step(id, step_id)
 
-Mark a step as finished.
+Toggle a step's finished state: an unfinished step is marked finished
+(clearing any deadline), and calling it again on a finished step reopens it.
 
 # Example
 ```julia

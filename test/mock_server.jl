@@ -869,7 +869,7 @@ function route_subresource(state::MockState, method::String, entity::Dict, colle
             if method == "POST"
                 data = parse_json_body(req)
                 step_id = new_id!(state)
-                push!(steps, Dict{String, Any}("id" => step_id, "body" => get(data, "body", ""), "finished" => false))
+                push!(steps, Dict{String, Any}("id" => step_id, "body" => get(data, "body", ""), "finished" => 0))
                 return created_response("/api/v2/$collection/$entity_id/steps/$step_id")
             end
         elseif n == 1
@@ -890,11 +890,20 @@ function route_subresource(state::MockState, method::String, entity::Dict, colle
                     step["deadline_notif"] = get(step, "deadline_notif", 0) == 1 ? 0 : 1
                     return json_response(step)
                 end
-                # Plain-field update (no action key).
+                if action == "finish"
+                    # Real server toggles `finished` (an int, 0/1) and clears the deadline.
+                    step["finished"] = get(step, "finished", 0) == 1 ? 0 : 1
+                    step["deadline"] = nothing
+                    return json_response(step)
+                end
+                # No action key = `update`. Like the real server's StepParams,
+                # any field other than these is rejected (e.g. `finished`).
+                fields = filter(k -> k != "action", collect(keys(data)))
+                all(in(("body", "deadline", "is_immutable", "finished_time")), fields) ||
+                    return HTTP.Response(400, "Incorrect parameter for steps.")
                 haskey(data, "body") && (step["body"] = data["body"])
                 haskey(data, "deadline") && (step["deadline"] = data["deadline"])
                 haskey(data, "is_immutable") && (step["is_immutable"] = data["is_immutable"])
-                get(data, "finished", false) && (step["finished"] = true)
                 return json_response(step)
             elseif method == "DELETE"
                 before = length(steps)
@@ -937,13 +946,12 @@ function route_subresource(state::MockState, method::String, entity::Dict, colle
             upload_id = tryparse(Int, rest[1])
             isnothing(upload_id) && return not_found()
             if method == "GET"
-                accept = HTTP.header(req, "Accept", "application/json")
+                params = parse_query(req.target)
                 for upload in uploads
                     upload["id"] == upload_id || continue
-                    # Binary Accept → serve the uploaded bytes, matching the
-                    # real server's `?format=binary` semantics (cache.jl uses
-                    # Accept for this, not the query param).
-                    if occursin("application/octet-stream", accept)
+                    # `?format=binary` serves the uploaded bytes; the real
+                    # server ignores the Accept header and returns JSON otherwise.
+                    if get(params, "format", "json") == "binary"
                         resp = HTTP.Response(200, get(upload, "_bytes", UInt8[]))
                         push!(resp.headers, "Content-Type" => "application/octet-stream")
                         return resp
